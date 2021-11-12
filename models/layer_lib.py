@@ -1,6 +1,5 @@
 from typing import Any, Dict, Optional, Sequence, Tuple
 import torch
-import torch.nn as nn
 from torch.autograd import Variable
 import numpy as np
 
@@ -16,12 +15,12 @@ def get_normalization_config(activation: Optional[str], use_bias: bool,
 
 def get_activation_layer(activation: str):
   if activation == "relu":
-    return nn.ReLU(inplace=True)
+    return torch.nn.ReLU(inplace=True)
   else:
     raise NotImplementedError
 
 
-class Conv2DReLUNorm(nn.Module):
+class Conv2DReLUNorm(torch.nn.Module):
 
   def __init__(
       self,
@@ -42,10 +41,10 @@ class Conv2DReLUNorm(nn.Module):
     self._bn = None
     if use_batchnorm:
       use_bias = False
-      self._bn = nn.BatchNorm2d(output_dim)
+      self._bn = torch.nn.BatchNorm2d(output_dim)
 
     padding = kernel_size // 2
-    self._conv = nn.Conv2d(
+    self._conv = torch.nn.Conv2d(
         input_dim,
         output_dim,
         kernel_size=kernel_size,
@@ -63,7 +62,7 @@ class Conv2DReLUNorm(nn.Module):
     return outputs
 
 
-class DownSample2D(nn.Module):
+class DownSample2D(torch.nn.Module):
 
   def __init__(self, downsample_scale: int, mode: str):
     super().__init__()
@@ -78,14 +77,14 @@ class DownSample2D(nn.Module):
           inputs.shape[2] // self._downsample_scale,
           inputs.shape[3] // self._downsample_scale,
       )
-    outputs = nn.functional.interpolate(inputs,
+    outputs = torch.nn.functional.interpolate(inputs,
                                         mode=self.mode,
                                         size=target_shape,
                                         align_corners=True)
     return outputs
 
 
-class UpSample2D(nn.Module):
+class UpSample2D(torch.nn.Module):
 
   def __init__(self,
                upsample_scale: Optional[int] = None,
@@ -101,14 +100,14 @@ class UpSample2D(nn.Module):
           inputs.shape[2] // self._upsample_scale,
           inputs.shape[3] // self._upsample_scale,
       )
-    outputs = nn.functional.interpolate(inputs,
+    outputs = torch.nn.functional.interpolate(inputs,
                                         mode=self.mode,
                                         size=target_shape,
                                         align_corners=True)
     return outputs
 
 
-class ResidualBlock(nn.Module):
+class ResidualBlock(torch.nn.Module):
 
   def __init__(
       self,
@@ -129,7 +128,7 @@ class ResidualBlock(nn.Module):
     for kernel_size in kernel_size_list:
       padding = kernel_size // 2
       self._conv_layers.append(
-          nn.Conv2d(
+          torch.nn.Conv2d(
               channels,
               channels,
               kernel_size,
@@ -137,7 +136,7 @@ class ResidualBlock(nn.Module):
               bias=use_bias,
           ))
       if use_bn:
-        self._norm_layers.append(nn.BatchNorm2d(channels))
+        self._norm_layers.append(torch.nn.BatchNorm2d(channels))
       else:
         self._norm_layers.append(None)
 

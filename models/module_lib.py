@@ -1,10 +1,9 @@
 from typing import Any, Dict, Optional, Sequence
 import torch
-import torch.nn as nn
 from .layer_lib import Conv2DReLUNorm, DownSample2D, UpSample2D
 
 
-class UnetEncoder(nn.Module):
+class UnetEncoder(torch.nn.Module):
 
   def __init__(
       self,
@@ -15,6 +14,20 @@ class UnetEncoder(nn.Module):
       output_level_list: Sequence[bool],
       normalization_config: Dict[str, Any],
   ):
+    """Initialize the encoder model.
+
+      Args:
+        input_channels: The number of channels in the input.
+        encoder_channels_list: The number of output channels of
+          the intermediate layers.
+        kernel_size_list: The kernel size of the intermediate
+          layers.
+        downsample_list: The downsample scale at each intermediate layer.
+        output_level_list: An array indicating which levels will be returned in
+          the forward pass.
+        normalization_config: The normalization configuration for the
+          intemediate layers.
+    """
     self._layers = []
     for layer_index in range(len(kernel_size_list)):
       output_channels = channels_list[layer_index]
@@ -28,6 +41,7 @@ class UnetEncoder(nn.Module):
     self._output_level_list = output_level_list
 
   def forward(self, x: torch.Tensor) -> Sequence[torch.Tensor]:
+    """Returns the features from coarse to fine."""
     return_list = []
     output = x
     for layer_index, layer in enumerate(self._layers):
@@ -38,7 +52,7 @@ class UnetEncoder(nn.Module):
     return return_list[::-1]
 
 
-class UnetDecoder(nn.Module):
+class UnetDecoder(torch.nn.Module):
 
   def __init__(
       self,
@@ -74,7 +88,7 @@ class UnetDecoder(nn.Module):
     outputs_list = []
     for level_index in range(len(self._output_level_list)):
       if isinstance(self._layers[level_index], tuple):
-        # has upsample layer if and only if has skip connection,
+        # It has upsample layer if and only if has skip connection,
         # except when it is the bottom-most feature.
         upsample_layer, conv_layer = self._layers[level_index]
         skip_inputs = x[skip_index]
