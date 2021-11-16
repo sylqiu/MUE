@@ -51,8 +51,15 @@ class GaussianEncoder(torch.nn.Module):
     return coarse_to_fine_features
 
   def get_distribution(self) -> torch.distributions:
-    return torch.distributions.Independent(
-        torch.distributions.Normal(loc=self.mu, scale=self.sigma), 1)
+    self.distribution = torch.distributions.Independent(torch.distributions.Normal(
+        loc=self.mu, scale=self.sigma), reinterpreted_batch_ndims=1)
+    return self.distribution
+    
+  def sample(self, use_random: bool) -> torch.Tensor:
+    if use_random:
+      return self.distribution.rsample()
+    else:
+      return self.mu  
 
   def get_latent_code_dimension(self):
     return self._latent_code_dimension
@@ -145,22 +152,6 @@ class ConditionalVAE(torch.nn.Module):
 
     self._latent_code_incorporation_level = latent_code_incorporation_level
 
-  def posterior_sample(self, use_random: bool):
-    if use_random:
-      code = self.posterior_distribution.rsample()
-    else:
-      code = self.posterior_distribution.sample()
-
-    return code
-
-  def prior_sample(self, use_random: bool):
-    if use_random:
-      code = self.prior_distribution.rsample()
-    else:
-      code = self.prior_distribution.sample()
-
-    return code
-
   def forward(self, inputs: torch.Tensor, label: torch.Tensor) -> torch.Tensor:
 
     prior_features_list = self._prior_encoder(inputs)
@@ -179,6 +170,12 @@ class ConditionalVAE(torch.nn.Module):
     prediction = self._decoder(prior_features_list)[-1]
 
     return prediction
+  
+  def posterior_sample(self, use_random: bool) -> torch.Tensor:
+    return self._posterior_encoder.sample(use_random)
+
+  def prior_sample(self, use_random: bool) -> torch.Tensor:
+    return self._prior_encoder.sample(use_random)
 
   def compute_kl_divergence(self):
     if self._encoder_class == "Gaussian":
