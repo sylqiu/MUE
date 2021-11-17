@@ -7,7 +7,6 @@ import numpy as np
 class QuantizeEMA(nn.Module):
 
   def __init__(self,
-               device: torch.Device,
                dim: int,
                n_embed: int,
                decay: float = 0.99,
@@ -15,7 +14,6 @@ class QuantizeEMA(nn.Module):
                init_std: float = 1):
     """ 
     Args:
-      device: torch device.
       dim: The dimension of the code.
       n_embed: Total number of codes in the code book.
       decay: Exponential moving average decay.
@@ -27,9 +25,8 @@ class QuantizeEMA(nn.Module):
     self.dim = dim
     self.init_decay = decay
     self.n_embed = n_embed
-    self.decay = torch.ones([n_embed]).to(device) * decay
+    self.decay = torch.ones([n_embed]) * decay
     self.eps = 1e-5
-    self._device = device
 
     embed = torch.randn(dim, n_embed) * init_std + init_mean
     # the code book variable
@@ -67,7 +64,7 @@ class QuantizeEMA(nn.Module):
     _, embed_ind = (-dist).max(1)
     embed_onehot = nn.functional.one_hot(embed_ind, self.n_embed).type(flatten.dtype)
     embed_ind = embed_ind.view(*inputs.shape[:-1])
-    quantize = self.embed_code(embed_ind)
+    quantized = self.embed_code(embed_ind)
 
     if training:
       self.cluster_size.data.mul_(self.decay).add_(
@@ -80,7 +77,7 @@ class QuantizeEMA(nn.Module):
       embed_normalized = self.embed_avg / cluster_size.unsqueeze(0)
       self.embed.data.copy_(embed_normalized)
 
-    diff = quantize.detach() - inputs
-    quantize = inputs + (quantize - inputs).detach()
-    quantize = quantize.permute(0, 3, 1, 2)
-    return quantize, diff, embed_ind
+    diff = quantized.detach() - inputs
+    quantized = inputs + (quantized - inputs).detach()
+    quantized = quantized.permute(0, 3, 1, 2)
+    return quantized, diff, embed_ind

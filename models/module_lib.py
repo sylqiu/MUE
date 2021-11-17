@@ -28,6 +28,7 @@ class UnetEncoder(torch.nn.Module):
         normalization_config: The normalization configuration for the
           intemediate layers.
     """
+    super().__init__()
     self._layers = []
     for layer_index in range(len(kernel_size_list)):
       output_channels = channels_list[layer_index]
@@ -63,6 +64,7 @@ class UnetDecoder(torch.nn.Module):
       output_level_list: Sequence[bool],
       normalization_config: Dict[str, Any],
   ):
+    super().__init__()
     self._layers = []
     self._output_level_list = output_level_list
     for layer_index in range(len(kernel_size_list)):

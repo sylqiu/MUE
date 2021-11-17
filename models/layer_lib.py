@@ -16,6 +16,8 @@ def get_normalization_config(activation: Optional[str], use_bias: bool,
 def get_activation_layer(activation: str):
   if activation == "relu":
     return torch.nn.ReLU(inplace=True)
+  elif activation == 'leaky_relu':
+    return torch.nn.LeakyReLU(inplace=True)
   else:
     raise NotImplementedError
 
@@ -89,6 +91,7 @@ class UpSample2D(torch.nn.Module):
   def __init__(self,
                upsample_scale: Optional[int] = None,
                mode: str = "BILINEAR"):
+    super().__init__()
     self._upsample_scale = upsample_scale
     self._mode = mode
 
@@ -115,6 +118,7 @@ class ResidualBlock(torch.nn.Module):
       kernel_size_list: Sequence[int],
       normalization_config: Dict[str, Any],
   ):
+    super().__init__()
     self._conv_layers = []
     self._norm_layers = []
     use_bias = normalization_config['use_bias']
