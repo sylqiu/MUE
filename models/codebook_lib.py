@@ -52,10 +52,13 @@ class QuantizeEMA(nn.Module):
         updated by exponential moving average.
 
     Return:
-      The quantized feaure (code), the difference between feature and quantized
-      feature, the index of the code in the code book.
+      The quantized feaure (code), of shape (B, C, H, W); the difference between
+      feature and quantized feature of shape (B, C, H, W); the index of the code
+      in the code book, of shape (B, H, W).
     """
     inputs = inputs.permute(0, 2, 3, 1)
+    
+    # flattened input has shape (B*H*W, C)
     flatten = inputs.reshape(-1, self.dim)
 
     # compute distance table
@@ -80,4 +83,5 @@ class QuantizeEMA(nn.Module):
     diff = quantized.detach() - inputs
     quantized = inputs + (quantized - inputs).detach()
     quantized = quantized.permute(0, 3, 1, 2)
+    diff = diff.permute(0, 3, 1, 2)
     return quantized, diff, embed_ind

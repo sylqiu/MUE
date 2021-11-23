@@ -116,6 +116,7 @@ class ResidualBlock(torch.nn.Module):
       self,
       channels: int,
       kernel_size_list: Sequence[int],
+      dilation_rate_list: Sequence[int],
       normalization_config: Dict[str, Any],
   ):
     super().__init__()
@@ -129,7 +130,7 @@ class ResidualBlock(torch.nn.Module):
       self._activation = get_activation_layer(
           normalization_config['activation'])
 
-    for kernel_size in kernel_size_list:
+    for kernel_size, dilation_rate in zip(kernel_size_list, dilation_rate_list):
       padding = kernel_size // 2
       self._conv_layers.append(
           torch.nn.Conv2d(
@@ -137,6 +138,7 @@ class ResidualBlock(torch.nn.Module):
               channels,
               kernel_size,
               padding,
+              dilation=dilation_rate,
               bias=use_bias,
           ))
       if use_bn:

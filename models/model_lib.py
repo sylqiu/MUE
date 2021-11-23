@@ -3,6 +3,7 @@ import torch
 
 from codebook_lib import QuantizeEMA
 from layer_lib import get_activation_layer
+from models.layer_lib import Conv2DReLUNorm, ResidualBlock
 from module_lib import UnetEncoder, UnetDecoder
 from ..utils.loss_lib import gaussian_kl_functional, discrete_kl_functional
 
@@ -105,8 +106,27 @@ class LatentCodeClassifier(torch.nn.Module):
   """A soft-max based classier.
   """
 
-  def __init__(self,):
-    pass
+  def __init__(self, input_channels: int, output_channels: int,
+               code_book_size: int, normalization_config: Dict[str, Any]):
+    self._layers = [
+        Conv2DReLUNorm(input_channels, output_channels, kernel_size=1)
+    ]
+    self._layers.append(
+        ResidualBlock(output_channels,
+                      kernel_size_list=[3, 3, 3],
+                      dilation_rate_list=[1, 3, 5],
+                      normalization_config=normalization_config))
+
+    self._layers = torch.nn.Sequential(self._layers)
+    self._linear_classifier = torch.nn.Linear(output_channels,
+                                              code_book_size,
+                                              bias=False)
+
+  def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+    """Returns a probability vector of shape (B, code_book_size)."""
+    return torch.nn.functional.softmax(self._linear_classifier(
+        torch.max(torch.max(self._layers(inputs), dim=-1), dim=-1)),
+                                       dim=1)
 
 
 class GaussianEncoder(torch.nn.Module):
@@ -216,12 +236,17 @@ class DiscretePosteriorEncoder(torch.nn.Module):
                                   init_std=std)
 
   def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+    """Returns the quantized code of shape (B, C, 1, 1)."""
     unquantized_code = self._encoder(inputs)[self.latent_code_level]
     unquantized_code = torch.mean(unquantized_code, dim=(2, 3), keepdim=True)
-
+    batch_size = inputs.shape[0]
     # Posterior is only used during training
     self.quantized, self.diff, self.code_index = self._code_book(
         unquantized_code, training=True)
+    
+    # Squeeze the extra dimensions.
+    self.code_index = self.code_index.view((batch_size,))
+    self.diff = self.diff.view((batch_size, self._latent_code_dimension))
     return self.quantized
 
   def get_distribution(self) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -268,14 +293,13 @@ class DiscretePriorEncoder(torch.nn.Module):
   def forward(self, inputs: torch.Tensor) -> torch.Tensor:
 
     coarse_to_fine_features = self._encoder(inputs)
-    latent_code_classifier_inputs = coarse_to_fine_features[
-        self._latent_code_level]
     self.classification_probability = self._code_classifier(
-        latent_code_classifier_inputs)
+        coarse_to_fine_features[self._latent_code_level])
 
     return coarse_to_fine_features
 
   def get_distribution(self) -> torch.Tensor:
+    """Returns a probability vector of shape (B, code_book_size)."""
     return self.classification_probability
 
   def sample(self, use_random: bool, num_sample: int) -> torch.Tensor:
@@ -287,7 +311,7 @@ class DiscretePriorEncoder(torch.nn.Module):
       val = torch.rand((num_sample, batch_size, 1))
       cutoffs = torch.cumsum(self.classification_probability, dim=1)
       cutoffs = cutoffs.view(1, batch_size, -1)
-      
+
       # indices should have shape (num_sample, batch_size, 1)
       _, indices = torch.max(cutoffs > val, dim=2)
 
@@ -299,11 +323,12 @@ class DiscretePriorEncoder(torch.nn.Module):
                                                 (num_sample, 1, 1))
       # sample probabilities should have shape
       # (num_sample, batch_size)
-      sample_probabilities = torch.gather(classification_probabilities, dim=2,
-                                   index=indices).squeeze(dim=2)
+      sample_probabilities = torch.gather(classification_probabilities,
+                                          dim=2,
+                                          index=indices).squeeze(dim=2)
       return samples, sample_probabilities
     else:
-      return self.sample_top_l(k=1)
+      return self.sample_top_k(k=1)
 
   def sample_top_k(self, k: int) -> Tuple[torch.Tensor, torch.Tensor]:
     """Sample the top-k latent codes from the distribution, organized in the
