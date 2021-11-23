@@ -243,7 +243,7 @@ class DiscretePosteriorEncoder(torch.nn.Module):
     # Posterior is only used during training
     self.quantized, self.diff, self.code_index = self._code_book(
         unquantized_code, training=True)
-    
+
     # Squeeze the extra dimensions.
     self.code_index = self.code_index.view((batch_size,))
     self.diff = self.diff.view((batch_size, self._latent_code_dimension))
@@ -377,6 +377,8 @@ class ConditionalVAE(torch.nn.Module):
     self._latent_code_incorporation_level = latent_code_incorporation_level
 
   def forward(self, inputs: torch.Tensor, label: torch.Tensor) -> torch.Tensor:
+    """Returns the prediction tensor, possibly need to be further processed by
+    sigmoid or softmax, depending on the applications."""
 
     prior_features_list = self._prior_encoder(inputs)
     self.prior_distribution = self._prior_encoder.get_distribution()
@@ -426,6 +428,7 @@ class ConditionalVAE(torch.nn.Module):
       top_k: Optional[int] = None,
       num_sample: int = 1
   ) -> Tuple[Sequence[torch.Tensor], Sequence[torch.Tensor]]:
+    """Returns the predictions and their probabilities."""
     if (self._encoder_class == "Discrete" and
         self._prior_encoder._code_book is None):
       self._prior_encoder.get_code_book(self._posterior_encoder.code_book.embed)
