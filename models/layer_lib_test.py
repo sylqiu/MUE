@@ -25,7 +25,7 @@ class TestLayerLib(unittest.TestCase):
     self.assertSequenceEqual(outputs.shape,
                              (BATCHSIZE, OUTPUT_CHANNELS, HEIGHT, WIDTH))
   
-  def test_DownSample2D(self):
+  def test_downsample_2d(self):
     inputs = torch.ones((BATCHSIZE, INPUT_CHANNELS, HEIGHT, WIDTH),
                         dtype=torch.float32)
     layer = layer_lib.DownSample2D(DOWNSAMPLE_SCALE, 'bilinear')
@@ -34,7 +34,7 @@ class TestLayerLib(unittest.TestCase):
     self.assertSequenceEqual(outputs.shape,
                              (BATCHSIZE, INPUT_CHANNELS, HEIGHT//DOWNSAMPLE_SCALE, WIDTH//DOWNSAMPLE_SCALE))
 
-  def test_UpSample2D(self):
+  def test_upsample_2d(self):
     inputs = torch.ones((BATCHSIZE, INPUT_CHANNELS, HEIGHT, WIDTH),
                         dtype=torch.float32)
     layer = layer_lib.UpSample2D(UPSAMPLE_SCALE)
@@ -43,7 +43,7 @@ class TestLayerLib(unittest.TestCase):
     self.assertSequenceEqual(outputs.shape,
                              (BATCHSIZE, INPUT_CHANNELS, HEIGHT*UPSAMPLE_SCALE, WIDTH*UPSAMPLE_SCALE))
   
-  def test_ResidualBlock(self):
+  def test_residual_block(self):
     inputs = torch.ones((BATCHSIZE, INPUT_CHANNELS, HEIGHT, WIDTH),
                         dtype=torch.float32)
     layer = layer_lib.ResidualBlock(INPUT_CHANNELS, KERNEL_SIZE_LIST, {'use_batchnorm':1, 'use_bias':0, 'activation':'relu'})
