@@ -155,29 +155,3 @@ class ResidualBlock(torch.nn.Module):
 
     return outputs
 
-
-if __name__ == '__main__':
-  '''
-  cov = Conv2DReLUNorm(3, 5, 5, activation = None)
-  matrix = torch.randn(1, 3, 32, 32)
-  output = cov(matrix)
-  print(output.shape)
-  '''
-  '''
-  down = DownSample2D(2, 'bilinear')
-  matrix = torch.randn(1, 3, 32, 32)
-  output = down(matrix, target_shape = None)
-  print(output.shape)
-  '''
-  '''
-  upsam = UpSample2D(2)
-  matrix = torch.randn(1, 3, 32, 32)
-  output = upsam(matrix, target_shape = None)
-  print(output.shape)
-  '''
-  '''
-  res = ResidualBlock(3, [3, 3], {'use_batchnorm':1, 'use_bias':0, 'activation':'relu'})
-  matrix = torch.randn(1, 3, 32, 32)
-  output = res(matrix)
-  print(output.shape)
-  '''
