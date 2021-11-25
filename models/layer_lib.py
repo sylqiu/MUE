@@ -16,8 +16,6 @@ def get_normalization_config(activation: Optional[str], use_bias: bool,
 def get_activation_layer(activation: str):
   if activation == "relu":
     return torch.nn.ReLU(inplace=True)
-  elif activation == 'leaky_relu':
-    return torch.nn.LeakyReLU(inplace=True)
   else:
     raise NotImplementedError
 
@@ -80,7 +78,7 @@ class DownSample2D(torch.nn.Module):
           inputs.shape[3] // self._downsample_scale,
       )
     outputs = torch.nn.functional.interpolate(inputs,
-                                        mode=self.mode,
+                                        mode=self._mode,
                                         size=target_shape,
                                         align_corners=True)
     return outputs
@@ -90,7 +88,7 @@ class UpSample2D(torch.nn.Module):
 
   def __init__(self,
                upsample_scale: Optional[int] = None,
-               mode: str = "BILINEAR"):
+               mode: str = "bilinear"):
     super().__init__()
     self._upsample_scale = upsample_scale
     self._mode = mode
@@ -100,11 +98,11 @@ class UpSample2D(torch.nn.Module):
               target_shape: Tuple[int, int] = None) -> torch.Tensor:
     if target_shape is None and self._upsample_scale is not None:
       target_shape = (
-          inputs.shape[2] // self._upsample_scale,
-          inputs.shape[3] // self._upsample_scale,
+          inputs.shape[2] * self._upsample_scale,
+          inputs.shape[3] * self._upsample_scale,
       )
     outputs = torch.nn.functional.interpolate(inputs,
-                                        mode=self.mode,
+                                        mode=self._mode,
                                         size=target_shape,
                                         align_corners=True)
     return outputs
@@ -116,7 +114,6 @@ class ResidualBlock(torch.nn.Module):
       self,
       channels: int,
       kernel_size_list: Sequence[int],
-      dilation_rate_list: Sequence[int],
       normalization_config: Dict[str, Any],
   ):
     super().__init__()
@@ -130,15 +127,14 @@ class ResidualBlock(torch.nn.Module):
       self._activation = get_activation_layer(
           normalization_config['activation'])
 
-    for kernel_size, dilation_rate in zip(kernel_size_list, dilation_rate_list):
+    for kernel_size in kernel_size_list:
       padding = kernel_size // 2
       self._conv_layers.append(
           torch.nn.Conv2d(
               channels,
               channels,
               kernel_size,
-              padding,
-              dilation=dilation_rate,
+              padding=padding,
               bias=use_bias,
           ))
       if use_bn:
@@ -148,7 +144,7 @@ class ResidualBlock(torch.nn.Module):
 
   def forward(self, inputs: torch.Tensor) -> torch.Tensor:
     outputs = inputs
-    for layer, norm in zip(self._layers, self._norm_layers):
+    for layer, norm in zip(self._conv_layers, self._norm_layers):
       res = layer(outputs)
       if self._activation is not None:
         res = self._activation(res)
@@ -158,3 +154,4 @@ class ResidualBlock(torch.nn.Module):
       outputs += res
 
     return outputs
+
