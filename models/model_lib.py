@@ -1,11 +1,13 @@
 from typing import Any, Dict, Optional, Sequence, Tuple
 import torch
-
 from codebook_lib import QuantizeEMA
 from layer_lib import get_activation_layer
 from models.layer_lib import Conv2DReLUNorm, ResidualBlock
 from module_lib import UnetEncoder, UnetDecoder
 from ..utils.loss_lib import gaussian_kl_functional, discrete_kl_functional
+
+GAUSSIAN_ENCODER = "Gaussian"
+DISCRETE_ENCODER = "Discrete"
 
 
 class LabelCombinationLayer(torch.nn.Module):
@@ -147,13 +149,13 @@ class GaussianEncoder(torch.nn.Module):
         code, the coarsest level is 0.
       latent_code_dimension: The dimension of the latent code.
       exponent_factor: The multiplicative factor for the exponential
-        nonlinearity.
+        nonlinearity, for getting the standard variation statistic.
     """
     super().__init__()
     self._encoder = UnetEncoder(**unet_encoder_param)
     self._latent_code_level = latent_code_level
     self._latent_stat_regressor = torch.nn.Conv2d(
-        unet_encoder_param['channels_list'][-1],
+        self._encoder.get_output_channels(),
         latent_code_dimension * 2,
         kernel_size=(1, 1))
     self._latent_code_dimension = latent_code_dimension
@@ -205,6 +207,9 @@ class GaussianEncoder(torch.nn.Module):
 
   def get_latent_code_dimension(self):
     return self._latent_code_dimension
+  
+  def get_input_channels(self):
+    return self._encoder.get_input_channels()
 
 
 class DiscretePosteriorEncoder(torch.nn.Module):
@@ -359,16 +364,23 @@ class ConditionalVAE(torch.nn.Module):
                decoder_param: Dict[str, Any]):
     super().__init__()
     self._encoder_class = encoder_class
-    if encoder_class == "Gaussian":
+    if encoder_class == GAUSSIAN_ENCODER:
       self._prior_encoder = GaussianEncoder(**prior_encoder_param)
       self._posterior_encoder = GaussianEncoder(**posterior_encoder_param)
+    elif encoder_class == DISCRETE_ENCODER:
+      self._prior_encoder = DiscretePriorEncoder(**prior_encoder_param)
+      self._posterior_encoder = DiscretePosteriorEncoder(
+          **posterior_encoder_param)
+    else:
+      raise NotImplementedError("%s encoder class is not implemented!" %
+                                (encoder_class))
 
     self._decoder = UnetDecoder(**decoder_param)
 
     self._label_combination_layer = LabelCombinationLayer(
         input_channels,
         label_channels,
-        feature_channels=posterior_encoder_param["input_channels"])
+        feature_channels=self._posterior_encoder.get_input_channels())
     self._latent_combination_layer = LatentCombinationLayer(
         latent_code_dimension,
         features_channels=decoder_param[input_channels],

@@ -2,13 +2,13 @@ from typing import Any, Dict, Optional, Sequence, Tuple
 import torch
 import torchvision.transforms.functional as TF
 import numpy as np
-from .data_io_lib import DataIO, get_data_io_by_name, IMAGE_KEY, GROUND_TRUTH_KEY, MODE_ID
+from .data_io_lib import get_data_io_by_name, IMAGE_KEY, GROUND_TRUTH_KEY, MODE_ID
 
-MAX_8BIT = 255.0
+MAX_INT8 = 255.0
 
 
 def to_numpy(pil_image: Any) -> np.ndarray:
-  return np.array(pil_image) / MAX_8BIT
+  return np.array(pil_image) / MAX_INT8
 
 
 def conform_channel_dim(image: np.ndarray):

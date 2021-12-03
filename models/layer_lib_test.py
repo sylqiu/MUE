@@ -13,7 +13,6 @@ UPSAMPLE_SCALE = 2
 KERNEL_SIZE_LIST = [3, 3]
 
 
-
 class TestLayerLib(unittest.TestCase):
 
   def test_conv2d_relu_norm(self):
@@ -24,7 +23,7 @@ class TestLayerLib(unittest.TestCase):
 
     self.assertSequenceEqual(outputs.shape,
                              (BATCHSIZE, OUTPUT_CHANNELS, HEIGHT, WIDTH))
-  
+
   def test_downsample_2d(self):
     inputs = torch.ones((BATCHSIZE, INPUT_CHANNELS, HEIGHT, WIDTH),
                         dtype=torch.float32)
@@ -32,7 +31,8 @@ class TestLayerLib(unittest.TestCase):
     outputs = layer(inputs)
 
     self.assertSequenceEqual(outputs.shape,
-                             (BATCHSIZE, INPUT_CHANNELS, HEIGHT//DOWNSAMPLE_SCALE, WIDTH//DOWNSAMPLE_SCALE))
+                             (BATCHSIZE, INPUT_CHANNELS, HEIGHT //
+                              DOWNSAMPLE_SCALE, WIDTH // DOWNSAMPLE_SCALE))
 
   def test_upsample_2d(self):
     inputs = torch.ones((BATCHSIZE, INPUT_CHANNELS, HEIGHT, WIDTH),
@@ -41,12 +41,17 @@ class TestLayerLib(unittest.TestCase):
     outputs = layer(inputs)
 
     self.assertSequenceEqual(outputs.shape,
-                             (BATCHSIZE, INPUT_CHANNELS, HEIGHT*UPSAMPLE_SCALE, WIDTH*UPSAMPLE_SCALE))
-  
+                             (BATCHSIZE, INPUT_CHANNELS,
+                              HEIGHT * UPSAMPLE_SCALE, WIDTH * UPSAMPLE_SCALE))
+
   def test_residual_block(self):
     inputs = torch.ones((BATCHSIZE, INPUT_CHANNELS, HEIGHT, WIDTH),
                         dtype=torch.float32)
-    layer = layer_lib.ResidualBlock(INPUT_CHANNELS, KERNEL_SIZE_LIST, {'use_batchnorm':1, 'use_bias':0, 'activation':'relu'})
+    layer = layer_lib.ResidualBlock(INPUT_CHANNELS, KERNEL_SIZE_LIST, {
+        'use_batchnorm': 1,
+        'use_bias': 0,
+        'activation': 'relu'
+    })
     outputs = layer(inputs)
 
     self.assertSequenceEqual(outputs.shape,

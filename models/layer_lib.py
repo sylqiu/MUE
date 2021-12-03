@@ -1,16 +1,7 @@
 from typing import Any, Dict, Optional, Sequence, Tuple
+import gin.torch
 import torch
 from torch.autograd import Variable
-import numpy as np
-
-
-def get_normalization_config(activation: Optional[str], use_bias: bool,
-                             use_batchnorm: bool):
-  return {
-      "activation": activation,
-      "use_bias": use_bias,
-      "use_batchnorm": use_batchnorm,
-  }
 
 
 def get_activation_layer(activation: str):
@@ -78,9 +69,9 @@ class DownSample2D(torch.nn.Module):
           inputs.shape[3] // self._downsample_scale,
       )
     outputs = torch.nn.functional.interpolate(inputs,
-                                        mode=self._mode,
-                                        size=target_shape,
-                                        align_corners=True)
+                                              mode=self._mode,
+                                              size=target_shape,
+                                              align_corners=True)
     return outputs
 
 
@@ -102,9 +93,9 @@ class UpSample2D(torch.nn.Module):
           inputs.shape[3] * self._upsample_scale,
       )
     outputs = torch.nn.functional.interpolate(inputs,
-                                        mode=self._mode,
-                                        size=target_shape,
-                                        align_corners=True)
+                                              mode=self._mode,
+                                              size=target_shape,
+                                              align_corners=True)
     return outputs
 
 
@@ -154,4 +145,3 @@ class ResidualBlock(torch.nn.Module):
       outputs += res
 
     return outputs
-
