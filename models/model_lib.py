@@ -426,12 +426,19 @@ class ConditionalVAE(torch.nn.Module):
     return self._prior_encdoer.sample_top_k(top_k)
 
   def compute_kl_divergence(self):
-    if self._encoder_class == "Gaussian":
+    if self._encoder_class == GAUSSIAN_ENCODER:
       return gaussian_kl_functional(self.prior_distribution,
                                     self.posterior_distribution)
-    if self._encoder_class == "Discrete":
+    if self._encoder_class == DISCRETE_ENCODER:
       return discrete_kl_functional(self.prior_distribution,
                                     self.posterior_distribution)
+      
+  def compute_regularization_loss(self):
+    reg_loss = 0.0
+    if self._encoder_class == DISCRETE_ENCODER:
+      reg_loss += self.posterior_distribution[0].pow(2).mean()
+      
+    return reg_loss
 
   def inference(
       self,

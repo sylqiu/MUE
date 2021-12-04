@@ -1,0 +1,13 @@
+get_gaussian_encoder_param.latent_code_level = 1
+get_gaussian_encoder_param.latent_code_dimension = 16
+
+get_cvae_param.encoder_class = "Gaussian"
+get_cvae_param.input_channels = 1
+get_cvae_param.label_channels = 1
+get_cvae_param.label_combination_layer_output_channels = 8
+get_cvae_param.latent_code_dimension = 16
+get_cvae_param.latent_code_incorporation_level = 1
+get_cvae_param.combine_method = "concat"
+ 
+
+

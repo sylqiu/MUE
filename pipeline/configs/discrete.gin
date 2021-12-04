@@ -1,0 +1,17 @@
+get_discrete_posterior_encoder_param.latent_code_level = 4
+get_discrete_posterior_encoder_param.latent_code_dimension = 128
+get_discrete_posterior_encoder_param.code_book_size = 512
+
+get_discrete_prior_encoder_param.latent_code_level = 4
+get_discrete_prior_encoder_param.latent_code_dimension = 128
+get_discrete_prior_encoder_param.code_book_size = 512
+
+get_cvae_param.encoder_class = "Discrete"
+get_cvae_param.input_channels = 1
+get_cvae_param.label_channels = 1
+get_cvae_param.label_combination_layer_output_channels = 8
+get_cvae_param.latent_code_dimension = 128
+get_cvae_param.latent_code_incorporation_level = 4
+get_cvae_param.combine_method = "concat"
+
+

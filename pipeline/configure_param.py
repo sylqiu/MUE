@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Sequence
+from typing import Optional, Tuple
 import gin
 from ..models.model_lib import GAUSSIAN_ENCODER, DISCRETE_ENCODER
 
@@ -160,5 +160,21 @@ def get_cvae_param(
       "latent_code_dimension": latent_code_dimension,
       "latent_code_incorporation_level": latent_code_incorporation_level,
       "combine_method": combine_method,
-      "decoder_param": get_unet_decoder_param()
+      "decoder_param": get_unet_decoder_param(output_channels=label_channels)
+  }
+
+
+@gin.configurable
+def get_data_loader_param(
+    dataset_name: str, random_crop_size: Optional[Tuple[int, int]],
+    random_height_width_ratio_range: Optional[Tuple[float, float]],
+    random_rotate_angle_range: Optional[Tuple[float, float]],
+    use_random_flip: bool, is_training: bool):
+  return {
+      "dataset_name": dataset_name,
+      "random_crop_size": random_crop_size,
+      "random_height_width_ratio_range": random_height_width_ratio_range,
+      "random_rotat,e_angle_range": random_rotate_angle_range,
+      "use_random_flip": use_random_flip,
+      "is_training": is_training
   }

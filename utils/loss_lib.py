@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 import torch
 
 
@@ -9,35 +9,33 @@ def gaussian_kl_functional(prior_distribution: torch.distribution,
                                            prior_distribution)
 
 
-def discrete_kl_functional(prior_distribution: torch.Tensor,
-                           posterior_distribution: Tuple[torch.Tensor,
-                                                         torch.Tensor],
-                           beta: float = 0.1):
+def discrete_kl_functional(
+    prior_distribution: torch.Tensor,
+    posterior_distribution: Tuple[torch.Tensor, torch.Tensor],
+):
   """Calculate the KL divergence between deterministic posterior and categorical
   prior. This amounts to a cross-entropy loss.
-  
-  We include the code regularization loss here for cleaner implementation.
   
   Args:
     prior_distribution: The probability vector on the code book, of shape
       (B, code_book_size).
     posterior_distribution: The difference between quantized and unquantized
       code of shape (B, C), and the code_index of shape (B,).
-    beta: The strength of code regularization loss applied of code difference.
     
   Returns:
     The loss scalar.
   """
-  code_reg_loss = posterior_distribution[0].pow(2).mean()
+
   classification_loss = torch.nn.functional.cross_entropy(
       prior_distribution, posterior_distribution[1])
 
-  return code_reg_loss * beta + classification_loss
+  return classification_loss
 
 
 def binary_segmentation_loss(prediction: torch.Tensor,
                              ground_truth: torch.Tensor,
-                             gamma: Optional[float]) -> torch.Tensor:
+                             mask: Optional[torch.Tensor],
+                             gamma: Optional[float] = None) -> torch.Tensor:
   """Compute the binary cross entropy loss with optional focal strength.
   
   Focal loss: https://arxiv.org/abs/1708.02002.
@@ -58,4 +56,25 @@ def binary_segmentation_loss(prediction: torch.Tensor,
   else:
     loss = -log_p
 
-  return loss.mean()
+  if mask is None:
+    return loss.mean()
+  else:
+    return torch.divide(loss * mask, mask.sum())
+
+
+def combine_fedility_losses(fidelity_loss_names_dict: Dict[str, float]):
+  loss_mapping = {"binary_segmentation_loss": binary_segmentation_loss}
+
+  def loss_fn(prediction: torch.Tensor, ground_truth: torch.Tensor,
+              mask: Optional[torch.Tensor]):
+    loss = 0.0
+    for name in fidelity_loss_names_dict:
+      if name in loss_mapping:
+        loss += loss_mapping[name](prediction, ground_truth,
+                                   mask) * fidelity_loss_names_dict[name]
+      else:
+        raise NotImplementedError("%s is not defined in loss_lib!" % name)
+
+    return loss
+
+  return loss_fn

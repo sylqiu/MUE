@@ -1,8 +1,9 @@
 from typing import Any, Dict, Optional, Sequence, Tuple
+import gin.torch
 import torch
 import torchvision.transforms.functional as TF
 import numpy as np
-from .data_io_lib import get_data_io_by_name, IMAGE_KEY, GROUND_TRUTH_KEY, MODE_ID
+from .data_io_lib import get_data_io_by_name, IMAGE_KEY, GROUND_TRUTH_KEY, MODE_ID_KEY
 
 MAX_INT8 = 255.0
 
@@ -124,7 +125,7 @@ class DataLoader(torch.utils.data.dataset):
       data_dict = random_rotate(data_dict, self._random_rotate_angle_range)
 
     data_dict = package_image_data(data_dict)
-    data_dict[MODE_ID] = mode_id
+    data_dict[MODE_ID_KEY] = mode_id
 
     return data_dict
 

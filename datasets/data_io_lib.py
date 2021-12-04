@@ -1,6 +1,6 @@
+import os
 from abc import ABC, abstractmethod
 from typing import Any, Dict
-from os.path import join as path_join
 from absl import logging
 import torch
 from PIL.Image import open as imread
@@ -8,7 +8,8 @@ import numpy as np
 
 IMAGE_KEY = "image"
 GROUND_TRUTH_KEY = "ground_truth"
-MODE_ID = "mode_id"
+MODE_ID_KEY = "mode_id"
+MASK_KEY = "mask"
 
 
 class DataIO(ABC):
@@ -37,19 +38,19 @@ def get_data_io_by_name(dataset_name: str) -> DataIO:
 class LIDC_IDRI(DataIO):
 
   def __init__(self, data_path_root: str, split: str):
-    file_list = tuple(open(path_join(data_path_root, "%s.txt" % (split)), "r"))
+    file_list = tuple(open(os.path.join(data_path_root, "%s.txt" % (split)), "r"))
     self.data_list = [id_.rstrip() for id_ in file_list]
     self.length = len(self.data_list)
-    self.data_path_root = path_join(data_path_root, split)
+    self.data_path_root = os.path.join(data_path_root, split)
     logging.info("%s split contains %d images" % (split, self.length))
 
   def _get_ground_truth_name_format(self, input_index: int) -> str:
-    return path_join(self.data_path_root, "gt",
+    return os.path.join(self.data_path_root, "gt",
                      self.data_list[input_index].replace(".png", "_l%d.png"))
 
   def get_data(self, input_index: int,
                output_selection_index: int) -> Dict[str, Any]:
-    image_name = path_join(self.data_path_root, "images",
+    image_name = os.path.join(self.data_path_root, "images",
                            self.data_list[input_index])
     ground_truth_name = self._get_ground_truth_name_format(input_index) % (
         output_selection_index)

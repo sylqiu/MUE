@@ -1,0 +1,12 @@
+get_normalization_config.activation = "relu"
+get_normalization_config.use_bias = True
+get_normalization_config.use_batch_norm = True
+
+get_unet_encoder_param.channels_multiplier = 8
+get_unet_encoder_param.max_channels = 128
+get_unet_encoder_param.num_level = 5
+
+get_unet_decoder_param.channels_multiplier = 8
+get_unet_decoder_param.max_channels = 128
+get_unet_decoder_param.num_level = 5
+
