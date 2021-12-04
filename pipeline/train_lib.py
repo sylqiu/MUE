@@ -23,14 +23,17 @@ def train_epoch(model: ConditionalVAE, data_loader: torch.utils.data.dataLoader,
                 fidelity_loss_fn: Callable[
                     [torch.Tensor, torch.Tensor, Optional[torch.Tensor]],
                     torch.Tensor], loss_weight_config: Dict[str, float],
-                optimizer: torch.optim.Optimizer, average_meter: AverageMeter):
+                optimizer: torch.optim.Optimizer, average_meter: AverageMeter,
+                device: str):
+
+  Tensor = torch.cuda.FloatTensor if device == "cuda" else torch.FloatTensor
 
   def train_step(batch: Dict[str, torch.Tensor]):
-    inputs = batch[IMAGE_KEY]
-    ground_truth = batch[GROUND_TRUTH_KEY]
+    inputs = batch[IMAGE_KEY].to(device).type(Tensor)
+    ground_truth = batch[GROUND_TRUTH_KEY].to(device).type(Tensor)
     mask = None
     if MASK_KEY in batch:
-      mask = batch[MASK_KEY]
+      mask = batch[MASK_KEY].to(device).type(Tensor)
 
     prediction = model.forward(inputs=inputs, label=ground_truth)
 
@@ -60,8 +63,12 @@ def train(batch_size: int, num_epochs: int,
           fidelity_loss_names_dict: Dict[str, float],
           cvae_loss_weight_dict: Dict[str, float], initial_learning_rate: float,
           learning_rate_milestones: Dict[int, float]):
+
+  has_cuda = True if torch.cuda.is_available() else False
+  device = torch.device("cuda" if has_cuda else "cpu")
+
   dataset = DataLoader(**get_data_loader_param())
-  model = ConditionalVAE(**get_cvae_param())
+  model = ConditionalVAE(**get_cvae_param()).to(device)
   train_loader = DataLoader(dataset,
                             batch_size=batch_size,
                             shuffle=True,
@@ -87,4 +94,5 @@ def train(batch_size: int, num_epochs: int,
                 fidelity_loss_fn=fidelity_loss_fn,
                 loss_weight_config=cvae_loss_weight_dict,
                 optimizer=optimizer,
-                average_meter=average_meter)
+                average_meter=average_meter,
+                device=device)
