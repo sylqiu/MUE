@@ -30,7 +30,6 @@ class TestModuleLib(unittest.TestCase):
         h = HEIGHT
         w =WIDTH
         for i in range(len(KERNEL_SIZE_LIST)):
-
             self.assertSequenceEqual(outputs[i+k].shape,
                              (BATCHSIZE, ENCODER_CHANNEL_LIST[i], h, w))
             if DOWNSAMPLE_LIST[i]:

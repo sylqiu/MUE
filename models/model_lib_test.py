@@ -1,11 +1,22 @@
 import unittest
 import torch
 import model_lib
+import sys
+#sys.path.append('C:/Users/ligen/OneDrive - The Chinese University of Hong Kong/Code/MUE/pipeline')
+sys.path.append('C:/Users/gli/OneDrive - The Chinese University of Hong Kong/Code/MUE/pipeline')
+import configure_param
 import gin
 
+gin.parse_config_file('C:/Users/gli/OneDrive - The Chinese University of Hong Kong/Code/MUE/pipeline/configs/common.gin')
+gin.parse_config_file('C:/Users/gli/OneDrive - The Chinese University of Hong Kong/Code/MUE/pipeline/configs/discrete.gin')
+gin.parse_config_file('C:/Users/gli/OneDrive - The Chinese University of Hong Kong/Code/MUE/pipeline/configs/gaussian.gin')
+#gin.parse_config_file('C:/Users/ligen/OneDrive - The Chinese University of Hong Kong/Code/MUE/pipeline/configs/common.gin')
+#gin.parse_config_file('C:/Users/ligen/OneDrive - The Chinese University of Hong Kong/Code/MUE/pipeline/configs/discrete.gin')
+#gin.parse_config_file('C:/Users/ligen/OneDrive - The Chinese University of Hong Kong/Code/MUE/pipeline/configs/gaussian.gin')
+
 BATCHSIZE = 2
-HEIGHT = 100
-WIDTH = 120
+HEIGHT = 256
+WIDTH = 256
 INPUT_CHANNELS = 3
 
 LABEL_CHANNELS = 1
@@ -16,6 +27,8 @@ LATENT_CODE_DIMENSION = 12
 OUTPUT_CHANNELS = 2
 CODE_BOOK_SIZE = 10
 NORMALIZATION_CONFIG = {'use_batchnorm':1, 'use_bias':0, 'activation':'relu'}
+
+
 
 class TestModelLib(unittest.TestCase):
 
@@ -48,7 +61,89 @@ class TestModelLib(unittest.TestCase):
         self.assertSequenceEqual(outputs.shape,
                              (BATCHSIZE, CODE_BOOK_SIZE))
 
+    def test_gaussian_encoder(self):
+        inputs = torch.ones((BATCHSIZE, INPUT_CHANNELS, HEIGHT, WIDTH),
+                        dtype=torch.float32)
+        PARAM = configure_param.get_gaussian_encoder_param(INPUT_CHANNELS)
+        UNET_PARAM = PARAM["unet_encoder_param"]
+        KERNEL_SIZE_LIST = UNET_PARAM["kernel_size_list"]
+        ENCODER_CHANNEL_LIST = UNET_PARAM["channels_list"]
+        DOWNSAMPLE_LIST = UNET_PARAM["downsample_list"]
+        OUTPUT_LEVEL_LIST = UNET_PARAM["output_level_list"]
+        layer = model_lib.GaussianEncoder(**PARAM)
+        outputs = layer(inputs)
+        outputs = outputs[::-1]
+        k = 0
+        h = HEIGHT
+        w =WIDTH
+        for i in range(len(KERNEL_SIZE_LIST), 2):
+                self.assertSequenceEqual(outputs[k].shape,
+                             (BATCHSIZE, ENCODER_CHANNEL_LIST[i], h, w))
+                k = k+1
+                h = h//2
+                w = w//2 
+                    
+
+
+
+    def test_discrete_posterior_encoder(self):
+        
+        LATENT_CODE_DIMENSIONS = 128
+        PARAM = configure_param.get_discrete_posterior_encoder_param(LATENT_CODE_DIMENSIONS)
+        inputs = torch.ones((BATCHSIZE, LATENT_CODE_DIMENSIONS, HEIGHT, WIDTH),
+                        dtype=torch.float32)
+        layer = model_lib.DiscretePosteriorEncoder(**PARAM)
+        layer.initialize_code_book(0, 1)
+        outputs = layer(inputs)
+        self.assertSequenceEqual(outputs.shape,
+                             (BATCHSIZE, LATENT_CODE_DIMENSIONS, 1, 1))
+
+
+    def test_discrete_prior_encoder(self):
+        LATENT_CODE_DIMENSIONS = 12
+        PARAM = configure_param.get_discrete_prior_encoder_param(LATENT_CODE_DIMENSIONS)
+        inputs = torch.ones((BATCHSIZE, LATENT_CODE_DIMENSIONS, HEIGHT, WIDTH),
+                        dtype=torch.float32)
+        layer = model_lib.DiscretePriorEncoder(**PARAM)
+        layer.get_code_book(torch.ones((128,512), dtype=torch.float32))
+        outputs = layer(inputs)
+        UNET_PARAM = PARAM["unet_encoder_param"]
+        KERNEL_SIZE_LIST = UNET_PARAM["kernel_size_list"]
+        ENCODER_CHANNEL_LIST = UNET_PARAM["channels_list"]
+        OUTPUT_LEVEL_LIST = UNET_PARAM["output_level_list"]
+        outputs = outputs[::-1]
+        k = 0
+        h = HEIGHT
+        w =WIDTH
+        for i in range(len(KERNEL_SIZE_LIST), 2):
+                self.assertSequenceEqual(outputs[k].shape,
+                             (BATCHSIZE, ENCODER_CHANNEL_LIST[i], h, w))
+                k = k+1
+                h = h//2
+                w = w//2
     
+    def test_conditional_vae(self):
+        inputs = torch.ones((BATCHSIZE, 1, HEIGHT, WIDTH),
+                        dtype=torch.float32)
+        labels = torch.ones((BATCHSIZE, 1, HEIGHT, WIDTH),
+                        dtype=torch.float32)                
+        PARAM = configure_param.get_cvae_param()
+        layer = model_lib.ConditionalVAE(**PARAM)
+        outputs = layer(inputs, labels)
+        self.assertSequenceEqual(outputs.shape,
+                             (BATCHSIZE, 1, HEIGHT, WIDTH))
+
+        infer = layer.inference(inputs)
+        self.assertSequenceEqual(infer[0][0].shape,
+                             (BATCHSIZE, 1, HEIGHT, WIDTH))
+        print(infer[1:])
+
+
+
+
+
+
+      
 
 
 

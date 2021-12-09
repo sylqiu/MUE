@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional, Sequence
 import torch
-from .layer_lib import Conv2DReLUNorm, DownSample2D, UpSample2D
+from layer_lib import Conv2DReLUNorm, DownSample2D, UpSample2D
 
 
 class UnetEncoder(torch.nn.Module):
@@ -30,35 +30,27 @@ class UnetEncoder(torch.nn.Module):
     """
     super().__init__()
     self._layers = []
-    self._input_channels = input_channels
     for layer_index in range(len(kernel_size_list)):
       output_channels = channels_list[layer_index]
       self._layers.append(
           Conv2DReLUNorm(input_channels, output_channels,
                          kernel_size_list[layer_index], **normalization_config))
       if downsample_list[layer_index]:
-        self._layers.append(DownSample2D(downsample_scale=2))
+        self._layers.append(DownSample2D(downsample_scale=2, mode='bilinear'))
       input_channels = output_channels
 
     self._output_level_list = output_level_list
-    self._output_channels = output_channels
 
   def forward(self, x: torch.Tensor) -> Sequence[torch.Tensor]:
     """Returns the features from coarse to fine."""
     return_list = []
     output = x
     for layer_index, layer in enumerate(self._layers):
-      output = layer(x)
+      output = layer(output)
       if self._output_level_list[layer_index]:
         return_list.append(output)
 
     return return_list[::-1]
-  
-  def get_input_channels(self):
-    return self._input_channels
-  
-  def get_output_channels(self):
-    return self._output_channels
 
 
 class UnetDecoder(torch.nn.Module):
@@ -73,7 +65,6 @@ class UnetDecoder(torch.nn.Module):
       normalization_config: Dict[str, Any],
   ):
     super().__init__()
-    self._input_channels = input_channels
     self._layers = []
     self._output_level_list = output_level_list
     for layer_index in range(len(kernel_size_list)):
@@ -81,7 +72,7 @@ class UnetDecoder(torch.nn.Module):
       if skip_channels_list[layer_index] is not None:
         input_channels += skip_channels_list[layer_index]
         self._layers.append((
-            UpSample2D(),
+            UpSample2D(None),
             Conv2DReLUNorm(input_channels, output_channels,
                            kernel_size_list[layer_index],
                            **normalization_config),
@@ -92,8 +83,6 @@ class UnetDecoder(torch.nn.Module):
                            kernel_size_list[layer_index],
                            **normalization_config))
       input_channels = output_channels
-      
-    self._output_channels = output_channels
 
   def forward(self, x: Sequence[torch.Tensor]):
     skip_index = 1
@@ -105,7 +94,7 @@ class UnetDecoder(torch.nn.Module):
         # except when it is the bottom-most feature.
         upsample_layer, conv_layer = self._layers[level_index]
         skip_inputs = x[skip_index]
-        outputs = torch.cat((upsample_layer(outputs, skip_inputs.shape[2:4])),
+        outputs = torch.cat((upsample_layer(outputs, skip_inputs.shape[2:4]), skip_inputs),
                             axis=1)
         outputs = conv_layer(outputs)
         skip_index += 1
@@ -117,12 +106,6 @@ class UnetDecoder(torch.nn.Module):
         outputs_list.append(outputs)
 
     return outputs_list
-  
-  def get_input_channels(self):
-    return self._input_channels
-  
-  def get_output_channels(self):
-    return self._output_channels
     
   
     
