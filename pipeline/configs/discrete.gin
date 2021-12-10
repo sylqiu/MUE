@@ -1,8 +1,8 @@
-get_discrete_posterior_encoder_param.latent_code_level = 4
+get_discrete_posterior_encoder_param.latent_code_level = 0
 get_discrete_posterior_encoder_param.latent_code_dimension = 128
 get_discrete_posterior_encoder_param.code_book_size = 512
 
-get_discrete_prior_encoder_param.latent_code_level = 4
+get_discrete_prior_encoder_param.latent_code_level = 0
 get_discrete_prior_encoder_param.latent_code_dimension = 128
 get_discrete_prior_encoder_param.code_book_size = 512
 
