@@ -30,6 +30,7 @@ class UnetEncoder(torch.nn.Module):
     """
     super().__init__()
     self._layers = []
+    self._input_channels = input_channels
     for layer_index in range(len(kernel_size_list)):
       output_channels = channels_list[layer_index]
       self._layers.append(
@@ -40,6 +41,7 @@ class UnetEncoder(torch.nn.Module):
       input_channels = output_channels
 
     self._output_level_list = output_level_list
+    self._output_channels = output_channels
 
   def forward(self, x: torch.Tensor) -> Sequence[torch.Tensor]:
     """Returns the features from coarse to fine."""
@@ -51,6 +53,12 @@ class UnetEncoder(torch.nn.Module):
         return_list.append(output)
 
     return return_list[::-1]
+  
+  def get_input_channels(self):
+    return self._input_channels
+
+  def get_output_channels(self):
+    return self._output_channels
 
 
 class UnetDecoder(torch.nn.Module):
@@ -66,6 +74,7 @@ class UnetDecoder(torch.nn.Module):
   ):
     super().__init__()
     self._layers = []
+    self._input_channels = input_channels
     self._output_level_list = output_level_list
     for layer_index in range(len(kernel_size_list)):
       output_channels = channels_list[layer_index]
@@ -83,6 +92,7 @@ class UnetDecoder(torch.nn.Module):
                            kernel_size_list[layer_index],
                            **normalization_config))
       input_channels = output_channels
+    self._output_channels = output_channels
 
   def forward(self, x: Sequence[torch.Tensor]):
     skip_index = 1
@@ -106,6 +116,12 @@ class UnetDecoder(torch.nn.Module):
         outputs_list.append(outputs)
 
     return outputs_list
+  
+  def get_input_channels(self):
+    return self._input_channels
+
+  def get_output_channels(self):
+    return self._output_channels
     
   
     
