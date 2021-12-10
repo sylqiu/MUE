@@ -2,8 +2,8 @@ from typing import Dict, Optional, Tuple
 import torch
 
 
-def gaussian_kl_functional(prior_distribution: torch.distributions,
-                           posterior_distribution: torch.distributions):
+def gaussian_kl_functional(prior_distribution: torch.distribution,
+                           posterior_distribution: torch.distribution):
   """Calculate the KL divergence between Gaussian posterior and prior."""
   return torch.distributions.kl_divergence(posterior_distribution,
                                            prior_distribution)
