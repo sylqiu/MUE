@@ -7,7 +7,6 @@ from layer_lib import get_activation_layer
 from layer_lib import Conv2DReLUNorm, ResidualBlock
 from module_lib import UnetEncoder, UnetDecoder
 import sys
-#sys.path.append('C:/Users/ligen/OneDrive - The Chinese University of Hong Kong/Code/MUE/utils')
 sys.path.append('C:/Users/gli/OneDrive - The Chinese University of Hong Kong/Code/MUE/utils')
 import loss_lib
 #from ..utils.loss_lib import gaussian_kl_functional, discrete_kl_functional
@@ -100,7 +99,7 @@ class LatentCombinationLayer(torch.nn.Module):
               feature: torch.Tensor) -> torch.Tensor:
     height, width = feature.shape[2:4]
     if len(latent_code.shape) == 2:
-      #latent_code = torch.tile(latent_code, (1, 1, height, width//latent_code.shape[1]))
+      #latent_code = torch.tile(latent_code, (1, 1, height, width))
       latent_code = torch.tile(latent_code, (feature.shape[0], latent_code.shape[1], height, width))
       latent_code = latent_code[:, :, :height, :width]
     elif len(latent_code.shape) == 4:

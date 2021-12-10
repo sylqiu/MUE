@@ -2,17 +2,14 @@ import unittest
 import torch
 import model_lib
 import sys
-#sys.path.append('C:/Users/ligen/OneDrive - The Chinese University of Hong Kong/Code/MUE/pipeline')
-sys.path.append('C:/Users/gli/OneDrive - The Chinese University of Hong Kong/Code/MUE/pipeline')
+#sys.path.append('C:/Users/gli/OneDrive - The Chinese University of Hong Kong/Code/MUE/pipeline')
 import configure_param
 import gin
 
 gin.parse_config_file('C:/Users/gli/OneDrive - The Chinese University of Hong Kong/Code/MUE/pipeline/configs/common.gin')
 gin.parse_config_file('C:/Users/gli/OneDrive - The Chinese University of Hong Kong/Code/MUE/pipeline/configs/discrete.gin')
 gin.parse_config_file('C:/Users/gli/OneDrive - The Chinese University of Hong Kong/Code/MUE/pipeline/configs/gaussian.gin')
-#gin.parse_config_file('C:/Users/ligen/OneDrive - The Chinese University of Hong Kong/Code/MUE/pipeline/configs/common.gin')
-#gin.parse_config_file('C:/Users/ligen/OneDrive - The Chinese University of Hong Kong/Code/MUE/pipeline/configs/discrete.gin')
-#gin.parse_config_file('C:/Users/ligen/OneDrive - The Chinese University of Hong Kong/Code/MUE/pipeline/configs/gaussian.gin')
+
 
 BATCHSIZE = 2
 HEIGHT = 256
@@ -136,7 +133,6 @@ class TestModelLib(unittest.TestCase):
         infer = layer.inference(inputs)
         self.assertSequenceEqual(infer[0][0].shape,
                              (BATCHSIZE, 1, HEIGHT, WIDTH))
-        print(infer[1:])
 
 
 
