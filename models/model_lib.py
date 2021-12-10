@@ -1,14 +1,20 @@
 from typing import Any, Dict, Optional, Sequence, Tuple
 import torch
+from torch import functional
+
 from codebook_lib import QuantizeEMA
 from layer_lib import get_activation_layer
-from models.layer_lib import Conv2DReLUNorm, ResidualBlock
+from layer_lib import Conv2DReLUNorm, ResidualBlock
 from module_lib import UnetEncoder, UnetDecoder
-from ..utils.loss_lib import gaussian_kl_functional, discrete_kl_functional
+import sys
+#sys.path.append('C:/Users/ligen/OneDrive - The Chinese University of Hong Kong/Code/MUE/utils')
+sys.path.append('C:/Users/gli/OneDrive - The Chinese University of Hong Kong/Code/MUE/utils')
+import loss_lib
+#from ..utils.loss_lib import gaussian_kl_functional, discrete_kl_functional
+
 
 GAUSSIAN_ENCODER = "Gaussian"
 DISCRETE_ENCODER = "Discrete"
-
 
 class LabelCombinationLayer(torch.nn.Module):
   """The Layer that combines the label and its inputs to feed into the posterior
@@ -26,15 +32,16 @@ class LabelCombinationLayer(torch.nn.Module):
                kernel_size: int = 3,
                activation: str = "relu"):
     super().__init__()
-    self._conv1 = torch.nn.Sequential([
-        torch.nn.Conv2d(label_channels, feature_channels, kernel_size),
+    padding = kernel_size // 2
+    self._conv1 = torch.nn.Sequential(
+        torch.nn.Conv2d(label_channels, feature_channels, kernel_size, padding=padding),
         get_activation_layer(activation)
-    ])
-    self._conv2 = torch.nn.Sequential([
+    )
+    self._conv2 = torch.nn.Sequential(
         torch.nn.Conv2d(feature_channels + input_channels, feature_channels,
-                        kernel_size),
+                        kernel_size, padding=padding),
         get_activation_layer(activation)
-    ])
+    )
 
   def forward(self, inputs: torch.Tensor, label: torch.Tensor) -> torch.Tensor:
     transformed_label = torch.nn.functional.interpolate(self._conv1(label),
@@ -69,22 +76,23 @@ class LatentCombinationLayer(torch.nn.Module):
         NotImplementedError: [description]
     """
     super().__init__()
+
     self._combine_method = combine_method
     if combine_method == "concat":
-      self._process_layer = torch.nn.Sequential([
+      self._process_layer = torch.nn.Sequential(
           torch.nn.Conv2d(in_channels=(latent_code_dimension +
                                        feature_channels),
                           out_channels=feature_channels,
                           kernel_size=(1, 1)),
           get_activation_layer(activation)
-      ])
+      )
     elif combine_method == "sum":
-      self._process_layer = torch.nn.Sequential([
+      self._process_layer = torch.nn.Sequential(
           torch.nn.Conv2d(in_channels=latent_code_dimension,
                           out_channels=feature_channels,
                           kernel_size=(1, 1)),
           get_activation_layer(activation)
-      ])
+      )
     else:
       raise NotImplementedError
 
@@ -92,7 +100,9 @@ class LatentCombinationLayer(torch.nn.Module):
               feature: torch.Tensor) -> torch.Tensor:
     height, width = feature.shape[2:4]
     if len(latent_code.shape) == 2:
-      latent_code = torch.tile(latent_code, (1, 1, height, width))
+      #latent_code = torch.tile(latent_code, (1, 1, height, width//latent_code.shape[1]))
+      latent_code = torch.tile(latent_code, (feature.shape[0], latent_code.shape[1], height, width))
+      latent_code = latent_code[:, :, :height, :width]
     elif len(latent_code.shape) == 4:
       latent_code = torch.nn.functional.interpolate(latent_code,
                                                     (height, width))
@@ -110,25 +120,25 @@ class LatentCodeClassifier(torch.nn.Module):
 
   def __init__(self, input_channels: int, output_channels: int,
                code_book_size: int, normalization_config: Dict[str, Any]):
-    self._layers = [
-        Conv2DReLUNorm(input_channels, output_channels, kernel_size=1)
-    ]
-    self._layers.append(
+
+    super().__init__()   
+    
+    self._layers = torch.nn.Sequential(
+        Conv2DReLUNorm(input_channels, output_channels, kernel_size=1, 
+                     activation='relu'),
         ResidualBlock(output_channels,
                       kernel_size_list=[3, 3, 3],
-                      dilation_rate_list=[1, 3, 5],
                       normalization_config=normalization_config))
-
-    self._layers = torch.nn.Sequential(self._layers)
+                      
     self._linear_classifier = torch.nn.Linear(output_channels,
                                               code_book_size,
                                               bias=False)
-
+  
   def forward(self, inputs: torch.Tensor) -> torch.Tensor:
     """Returns a probability vector of shape (B, code_book_size)."""
-    return torch.nn.functional.softmax(self._linear_classifier(
-        torch.max(torch.max(self._layers(inputs), dim=-1), dim=-1)),
-                                       dim=1)
+    outputs, _ = torch.max(self._layers(inputs), dim=-1)
+    outputs, _ = torch.max(outputs, dim=-1)
+    return torch.nn.functional.softmax(self._linear_classifier(outputs), dim=1)
 
 
 class GaussianEncoder(torch.nn.Module):
@@ -149,13 +159,13 @@ class GaussianEncoder(torch.nn.Module):
         code, the coarsest level is 0.
       latent_code_dimension: The dimension of the latent code.
       exponent_factor: The multiplicative factor for the exponential
-        nonlinearity, for getting the standard variation statistic.
+        nonlinearity.
     """
     super().__init__()
     self._encoder = UnetEncoder(**unet_encoder_param)
     self._latent_code_level = latent_code_level
     self._latent_stat_regressor = torch.nn.Conv2d(
-        self._encoder.get_output_channels(),
+        unet_encoder_param['channels_list'][-3],
         latent_code_dimension * 2,
         kernel_size=(1, 1))
     self._latent_code_dimension = latent_code_dimension
@@ -165,7 +175,7 @@ class GaussianEncoder(torch.nn.Module):
     batch_size = inputs.shape[0]
     coarse_to_fine_features = self._encoder(inputs)
     latent_code_input = torch.mean(
-        coarse_to_fine_features[self.latent_code_level],
+        coarse_to_fine_features[self._latent_code_level],
         dim=(2, 3),
         keepdim=True)
     mu_log_sigma = self._latent_stat_regressor(latent_code_input)
@@ -207,9 +217,6 @@ class GaussianEncoder(torch.nn.Module):
 
   def get_latent_code_dimension(self):
     return self._latent_code_dimension
-  
-  def get_input_channels(self):
-    return self._encoder.get_input_channels()
 
 
 class DiscretePosteriorEncoder(torch.nn.Module):
@@ -242,7 +249,7 @@ class DiscretePosteriorEncoder(torch.nn.Module):
 
   def forward(self, inputs: torch.Tensor) -> torch.Tensor:
     """Returns the quantized code of shape (B, C, 1, 1)."""
-    unquantized_code = self._encoder(inputs)[self.latent_code_level]
+    unquantized_code = self._encoder(inputs)[self._latent_code_level]
     unquantized_code = torch.mean(unquantized_code, dim=(2, 3), keepdim=True)
     batch_size = inputs.shape[0]
     # Posterior is only used during training
@@ -288,7 +295,13 @@ class DiscretePriorEncoder(torch.nn.Module):
     self._latent_code_level = latent_code_level
     self._latent_code_dimension = latent_code_dimension
     self._code_book_size = code_book_size
-    self._code_classifier = LatentCodeClassifier()
+    self._code_classifier = LatentCodeClassifier(
+                               unet_encoder_param["channels_list"][-1],
+                               latent_code_dimension,
+                               code_book_size,
+                               unet_encoder_param["normalization_config"]
+
+    )
     self._code_book = None
 
   def get_code_book(self, code_book: torch.Tensor):
@@ -364,26 +377,19 @@ class ConditionalVAE(torch.nn.Module):
                decoder_param: Dict[str, Any]):
     super().__init__()
     self._encoder_class = encoder_class
-    if encoder_class == GAUSSIAN_ENCODER:
+    if encoder_class == "Gaussian":
       self._prior_encoder = GaussianEncoder(**prior_encoder_param)
       self._posterior_encoder = GaussianEncoder(**posterior_encoder_param)
-    elif encoder_class == DISCRETE_ENCODER:
-      self._prior_encoder = DiscretePriorEncoder(**prior_encoder_param)
-      self._posterior_encoder = DiscretePosteriorEncoder(
-          **posterior_encoder_param)
-    else:
-      raise NotImplementedError("%s encoder class is not implemented!" %
-                                (encoder_class))
 
     self._decoder = UnetDecoder(**decoder_param)
 
     self._label_combination_layer = LabelCombinationLayer(
         input_channels,
         label_channels,
-        feature_channels=self._posterior_encoder.get_input_channels())
+        feature_channels=posterior_encoder_param["unet_encoder_param"]["input_channels"])
     self._latent_combination_layer = LatentCombinationLayer(
         latent_code_dimension,
-        features_channels=decoder_param[input_channels],
+        feature_channels=prior_encoder_param["unet_encoder_param"]["channels_list"][-3],
         combine_method=combine_method)
 
     self._latent_code_incorporation_level = latent_code_incorporation_level
@@ -398,9 +404,7 @@ class ConditionalVAE(torch.nn.Module):
     posterior_inputs = self._label_combination_layer(inputs, label)
     _ = self._posterior_encoder(posterior_inputs)
     self.posterior_distribution = self._posterior_encoder.get_distribution()
-
     posterior_latent_code = self.posterior_sample(use_random=True)
-
     decoder_inputs = self._latent_combination_layer(
         posterior_latent_code,
         prior_features_list[self._latent_code_incorporation_level])
@@ -426,19 +430,12 @@ class ConditionalVAE(torch.nn.Module):
     return self._prior_encdoer.sample_top_k(top_k)
 
   def compute_kl_divergence(self):
-    if self._encoder_class == GAUSSIAN_ENCODER:
+    if self._encoder_class == "Gaussian":
       return gaussian_kl_functional(self.prior_distribution,
                                     self.posterior_distribution)
-    if self._encoder_class == DISCRETE_ENCODER:
+    if self._encoder_class == "Discrete":
       return discrete_kl_functional(self.prior_distribution,
                                     self.posterior_distribution)
-      
-  def compute_regularization_loss(self):
-    reg_loss = 0.0
-    if self._encoder_class == DISCRETE_ENCODER:
-      reg_loss += self.posterior_distribution[0].pow(2).mean()
-      
-    return reg_loss
 
   def inference(
       self,
@@ -446,7 +443,7 @@ class ConditionalVAE(torch.nn.Module):
       use_random: bool = True,
       top_k: Optional[int] = None,
       num_sample: int = 1
-  ) -> Tuple[Sequence[torch.Tensor], Sequence[torch.Tensor]]:
+      ) -> Tuple[Sequence[torch.Tensor], Sequence[torch.Tensor]]:
     """Returns the predictions and their probabilities."""
     if (self._encoder_class == "Discrete" and
         self._prior_encoder._code_book is None):
@@ -467,7 +464,7 @@ class ConditionalVAE(torch.nn.Module):
 
     predictions = []
 
-    for sample_index in range(latent_codes.shape[-1]):
+    for sample_index in range(latent_codes.shape[0]):
       latent_code = latent_codes[sample_index]
       decoder_inputs = self._latent_combination_layer(
           latent_code, latent_combination_feature)
