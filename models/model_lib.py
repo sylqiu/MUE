@@ -165,7 +165,7 @@ class GaussianEncoder(torch.nn.Module):
     self._encoder = UnetEncoder(**unet_encoder_param)
     self._latent_code_level = latent_code_level
     self._latent_stat_regressor = torch.nn.Conv2d(
-        unet_encoder_param['channels_list'][-3],
+        self._encoder.get_output_channels(),
         latent_code_dimension * 2,
         kernel_size=(1, 1))
     self._latent_code_dimension = latent_code_dimension
@@ -217,6 +217,9 @@ class GaussianEncoder(torch.nn.Module):
 
   def get_latent_code_dimension(self):
     return self._latent_code_dimension
+  
+  def get_input_channels(self):
+    return self._encoder.get_input_channels()
 
 
 class DiscretePosteriorEncoder(torch.nn.Module):
@@ -377,16 +380,23 @@ class ConditionalVAE(torch.nn.Module):
                decoder_param: Dict[str, Any]):
     super().__init__()
     self._encoder_class = encoder_class
-    if encoder_class == "Gaussian":
+    if encoder_class == GAUSSIAN_ENCODER:
       self._prior_encoder = GaussianEncoder(**prior_encoder_param)
       self._posterior_encoder = GaussianEncoder(**posterior_encoder_param)
+    elif encoder_class == DISCRETE_ENCODER:
+      self._prior_encoder = DiscretePriorEncoder(**prior_encoder_param)
+      self._posterior_encoder = DiscretePosteriorEncoder(
+          **posterior_encoder_param)
+    else:
+      raise NotImplementedError("%s encoder class is not implemented!" %
+                                (encoder_class))
 
     self._decoder = UnetDecoder(**decoder_param)
 
     self._label_combination_layer = LabelCombinationLayer(
         input_channels,
         label_channels,
-        feature_channels=posterior_encoder_param["unet_encoder_param"]["input_channels"])
+        feature_channels=self._posterior_encoder.get_input_channels())
     self._latent_combination_layer = LatentCombinationLayer(
         latent_code_dimension,
         feature_channels=prior_encoder_param["unet_encoder_param"]["channels_list"][-3],
@@ -430,12 +440,19 @@ class ConditionalVAE(torch.nn.Module):
     return self._prior_encdoer.sample_top_k(top_k)
 
   def compute_kl_divergence(self):
-    if self._encoder_class == "Gaussian":
+    if self._encoder_class == GAUSSIAN_ENCODER:
       return gaussian_kl_functional(self.prior_distribution,
                                     self.posterior_distribution)
-    if self._encoder_class == "Discrete":
+    if self._encoder_class == DISCRETE_ENCODER:
       return discrete_kl_functional(self.prior_distribution,
                                     self.posterior_distribution)
+    
+  def compute_regularization_loss(self):
+    reg_loss = 0.0
+    if self._encoder_class == DISCRETE_ENCODER:
+      reg_loss += self.posterior_distribution[0].pow(2).mean()
+
+    return reg_loss
 
   def inference(
       self,
