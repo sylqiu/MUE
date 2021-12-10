@@ -47,7 +47,7 @@ class QuantizeEMA(nn.Module):
     """
     Args:
       inputs: The feature tensor of shapae (B, C, H, W) where each spatial
-        feature will be quantized.
+        feature will be quantized. C should be equal to self.dim.
       training: torch training argument, during training the code book will be 
         updated by exponential moving average.
 
