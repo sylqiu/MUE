@@ -1,11 +1,5 @@
 from typing import Optional, Tuple
 import gin
-import sys
-sys.path.append('C:/Users/gli/OneDrive - The Chinese University of Hong Kong/Code/MUE/models')
-import model_lib
-#from ..models.model_lib import GAUSSIAN_ENCODER, DISCRETE_ENCODER
-
-
 
 
 @gin.configurable
@@ -17,18 +11,15 @@ def get_normalization_config(activation: Optional[str], use_bias: bool,
       "use_batchnorm": use_batchnorm,
   }
 
-@gin.configurable
-def get_latent_classifier_param(
-    output_channel: int,
-    activation: Optional[str], 
-    use_bias: bool,
-    use_batchnorm: bool
 
-):
+@gin.configurable
+def get_latent_classifier_param(output_channel: int, activation: Optional[str],
+                                use_bias: bool, use_batchnorm: bool):
   return {
-      "output_channel": output_channel,
-      "normalization_config": get_normalization_config(
-          activation, use_bias, use_batchnorm)
+      "output_channel":
+          output_channel,
+      "normalization_config":
+          get_normalization_config(activation, use_bias, use_batchnorm)
   }
 
 
@@ -77,17 +68,17 @@ def get_unet_decoder_param(
   for level_index in range(num_level - 2, -1, -1):
     skip_channels = min(channels_multiplier * 2**(level_index), max_channels)
     current_output_channels = min(channels_multiplier * 2**(level_index),
-                                max_channels)
+                                  max_channels)
     skip_channels_list.extend([skip_channels, None])
-    channels_list.extend([skip_channels*2, current_output_channels])
-    kernel_size_list.extend([3,3])
+    channels_list.extend([skip_channels * 2, current_output_channels])
+    kernel_size_list.extend([3, 3])
     output_level_list.extend([False, True])
 
     if level_index == 0:
       current_output_channels = output_channels
       skip_channels_list.extend([skip_channels, None])
       channels_list.extend([skip_channels, current_output_channels])
-      kernel_size_list.extend([3,3])
+      kernel_size_list.extend([3, 3])
       output_level_list.extend([False, True])
 
   return {
@@ -102,14 +93,11 @@ def get_unet_decoder_param(
 
 @gin.configurable
 def get_gaussian_encoder_param(input_channels: int,
-                               latent_code_level: int,
                                latent_code_dimension: int,
                                exponent_factor: float = 0.5):
   return {
       "unet_encoder_param":
           get_unet_encoder_param(input_channels=input_channels),
-      "latent_code_level":
-          latent_code_level,
       "latent_code_dimension":
           latent_code_dimension,
       "exponent_factor":
@@ -119,14 +107,11 @@ def get_gaussian_encoder_param(input_channels: int,
 
 @gin.configurable
 def get_discrete_posterior_encoder_param(input_channels: int,
-                                         latent_code_level: int,
                                          latent_code_dimension: int,
                                          code_book_size: int):
   return {
       "unet_encoder_param":
           get_unet_encoder_param(input_channels=input_channels),
-      "latent_code_level":
-          latent_code_level,
       "latent_code_dimension":
           latent_code_dimension,
       "code_book_size":
@@ -136,14 +121,11 @@ def get_discrete_posterior_encoder_param(input_channels: int,
 
 @gin.configurable
 def get_discrete_prior_encoder_param(input_channels: int,
-                                     latent_code_level: int,
                                      latent_code_dimension: int,
                                      code_book_size: int):
   return {
       "unet_encoder_param":
           get_unet_encoder_param(input_channels=input_channels),
-      "latent_code_level":
-          latent_code_level,
       "latent_code_dimension":
           latent_code_dimension,
       "code_book_size":
@@ -201,4 +183,3 @@ def get_data_loader_param(
       "use_random_flip": use_random_flip,
       "is_training": is_training
   }
-

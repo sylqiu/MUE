@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional, Sequence
 import torch
-from layer_lib import Conv2DReLUNorm, DownSample2D, UpSample2D
+from .layer_lib import Conv2DReLUNorm, DownSample2D, UpSample2D
 
 
 class UnetEncoder(torch.nn.Module):
@@ -18,7 +18,7 @@ class UnetEncoder(torch.nn.Module):
 
       Args:
         input_channels: The number of channels in the input.
-        encoder_channels_list: The number of output channels of
+        channels_list: The number of output channels of
           the intermediate layers.
         kernel_size_list: The kernel size of the intermediate
           layers.

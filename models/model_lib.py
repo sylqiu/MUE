@@ -1,20 +1,15 @@
 from typing import Any, Dict, Optional, Sequence, Tuple
 import torch
-from torch import functional
 
-from codebook_lib import QuantizeEMA
-from layer_lib import get_activation_layer
-from layer_lib import Conv2DReLUNorm, ResidualBlock
-from module_lib import UnetEncoder, UnetDecoder
-import sys
-#sys.path.append('C:/Users/ligen/OneDrive - The Chinese University of Hong Kong/Code/MUE/utils')
-sys.path.append('C:/Users/gli/OneDrive - The Chinese University of Hong Kong/Code/MUE/utils')
-import loss_lib
-#from ..utils.loss_lib import gaussian_kl_functional, discrete_kl_functional
-
+from .codebook_lib import QuantizeEMA
+from .layer_lib import get_activation_layer
+from .layer_lib import Conv2DReLUNorm, ResidualBlock
+from .module_lib import UnetEncoder, UnetDecoder
+from utils.loss_lib import gaussian_kl_functional, discrete_kl_functional
 
 GAUSSIAN_ENCODER = "Gaussian"
 DISCRETE_ENCODER = "Discrete"
+
 
 class LabelCombinationLayer(torch.nn.Module):
   """The Layer that combines the label and its inputs to feed into the posterior
@@ -34,14 +29,15 @@ class LabelCombinationLayer(torch.nn.Module):
     super().__init__()
     padding = kernel_size // 2
     self._conv1 = torch.nn.Sequential(
-        torch.nn.Conv2d(label_channels, feature_channels, kernel_size, padding=padding),
-        get_activation_layer(activation)
-    )
+        torch.nn.Conv2d(label_channels,
+                        feature_channels,
+                        kernel_size,
+                        padding=padding), get_activation_layer(activation))
     self._conv2 = torch.nn.Sequential(
-        torch.nn.Conv2d(feature_channels + input_channels, feature_channels,
-                        kernel_size, padding=padding),
-        get_activation_layer(activation)
-    )
+        torch.nn.Conv2d(feature_channels + input_channels,
+                        feature_channels,
+                        kernel_size,
+                        padding=padding), get_activation_layer(activation))
 
   def forward(self, inputs: torch.Tensor, label: torch.Tensor) -> torch.Tensor:
     transformed_label = torch.nn.functional.interpolate(self._conv1(label),
@@ -83,16 +79,12 @@ class LatentCombinationLayer(torch.nn.Module):
           torch.nn.Conv2d(in_channels=(latent_code_dimension +
                                        feature_channels),
                           out_channels=feature_channels,
-                          kernel_size=(1, 1)),
-          get_activation_layer(activation)
-      )
+                          kernel_size=(1, 1)), get_activation_layer(activation))
     elif combine_method == "sum":
       self._process_layer = torch.nn.Sequential(
           torch.nn.Conv2d(in_channels=latent_code_dimension,
                           out_channels=feature_channels,
-                          kernel_size=(1, 1)),
-          get_activation_layer(activation)
-      )
+                          kernel_size=(1, 1)), get_activation_layer(activation))
     else:
       raise NotImplementedError
 
@@ -101,7 +93,8 @@ class LatentCombinationLayer(torch.nn.Module):
     height, width = feature.shape[2:4]
     if len(latent_code.shape) == 2:
       #latent_code = torch.tile(latent_code, (1, 1, height, width//latent_code.shape[1]))
-      latent_code = torch.tile(latent_code, (feature.shape[0], latent_code.shape[1], height, width))
+      latent_code = torch.tile(
+          latent_code, (feature.shape[0], latent_code.shape[1], height, width))
       latent_code = latent_code[:, :, :height, :width]
     elif len(latent_code.shape) == 4:
       latent_code = torch.nn.functional.interpolate(latent_code,
@@ -121,19 +114,21 @@ class LatentCodeClassifier(torch.nn.Module):
   def __init__(self, input_channels: int, output_channels: int,
                code_book_size: int, normalization_config: Dict[str, Any]):
 
-    super().__init__()   
-    
+    super().__init__()
+
     self._layers = torch.nn.Sequential(
-        Conv2DReLUNorm(input_channels, output_channels, kernel_size=1, 
-                     activation='relu'),
+        Conv2DReLUNorm(input_channels,
+                       output_channels,
+                       kernel_size=1,
+                       activation='relu'),
         ResidualBlock(output_channels,
                       kernel_size_list=[3, 3, 3],
                       normalization_config=normalization_config))
-                      
+
     self._linear_classifier = torch.nn.Linear(output_channels,
                                               code_book_size,
                                               bias=False)
-  
+
   def forward(self, inputs: torch.Tensor) -> torch.Tensor:
     """Returns a probability vector of shape (B, code_book_size)."""
     outputs, _ = torch.max(self._layers(inputs), dim=-1)
@@ -148,22 +143,19 @@ class GaussianEncoder(torch.nn.Module):
 
   def __init__(self,
                unet_encoder_param: Dict[str, Any],
-               latent_code_level: int,
                latent_code_dimension: int,
                exponent_factor: float = 0.5):
     """Initialize the encoder model.
 
     Args:
       unet_encoder_param: The initialization parameter for the UnetEncoder.
-      latent_code_level: The level of the output feature to use as the latent
-        code, the coarsest level is 0.
       latent_code_dimension: The dimension of the latent code.
       exponent_factor: The multiplicative factor for the exponential
         nonlinearity.
     """
     super().__init__()
     self._encoder = UnetEncoder(**unet_encoder_param)
-    self._latent_code_level = latent_code_level
+    self._latent_code_level = 0
     self._latent_stat_regressor = torch.nn.Conv2d(
         self._encoder.get_output_channels(),
         latent_code_dimension * 2,
@@ -217,7 +209,7 @@ class GaussianEncoder(torch.nn.Module):
 
   def get_latent_code_dimension(self):
     return self._latent_code_dimension
-  
+
   def get_input_channels(self):
     return self._encoder.get_input_channels()
 
@@ -226,20 +218,18 @@ class DiscretePosteriorEncoder(torch.nn.Module):
   """A Encoder that learns a code book.
   """
 
-  def __init__(self, unet_encoder_param: Dict[str, Any], latent_code_level: int,
+  def __init__(self, unet_encoder_param: Dict[str, Any],
                latent_code_dimension: int, code_book_size: int):
     """Initialize the encoder model.
 
     Args:
       unet_encoder_param: The initialization parameter for the UnetEncoder.
-      latent_code_level: The level of the output feature to use as the latent
-        code, the coarsest level is 0.
       latent_code_dimension: The dimension of the latent code.
       code_book_size: The number of latent codes in the code book.
     """
     super().__init__()
     self._encoder = UnetEncoder(**unet_encoder_param)
-    self._latent_code_level = latent_code_level
+    self._latent_code_level = 0
     self._latent_code_dimension = latent_code_dimension
     self._code_book_size = code_book_size
 
@@ -282,29 +272,23 @@ class DiscretePosteriorEncoder(torch.nn.Module):
 class DiscretePriorEncoder(torch.nn.Module):
   """A Encoder that learns a code book."""
 
-  def __init__(self, unet_encoder_param: Dict[str, Any], latent_code_level: int,
+  def __init__(self, unet_encoder_param: Dict[str, Any],
                latent_code_dimension: int, code_book_size: int):
     """Initialize the encoder model.
 
     Args:
       unet_encoder_param: The initialization parameter for the UnetEncoder.
-      latent_code_level: The level of the output feature to use as the latent
-        code, the coarsest level is 0.
       latent_code_dimension: The dimension of the latent code.
       code_book_size: The number of latent codes in the code book.
     """
     super().__init__()
     self._encoder = UnetEncoder(**unet_encoder_param)
-    self._latent_code_level = latent_code_level
+    self._latent_code_level = 0
     self._latent_code_dimension = latent_code_dimension
     self._code_book_size = code_book_size
     self._code_classifier = LatentCodeClassifier(
-                               unet_encoder_param["channels_list"][-1],
-                               latent_code_dimension,
-                               code_book_size,
-                               unet_encoder_param["normalization_config"]
-
-    )
+        unet_encoder_param["channels_list"][-1], latent_code_dimension,
+        code_book_size, unet_encoder_param["normalization_config"])
     self._code_book = None
 
   def get_code_book(self, code_book: torch.Tensor):
@@ -399,7 +383,8 @@ class ConditionalVAE(torch.nn.Module):
         feature_channels=self._posterior_encoder.get_input_channels())
     self._latent_combination_layer = LatentCombinationLayer(
         latent_code_dimension,
-        feature_channels=prior_encoder_param["unet_encoder_param"]["channels_list"][-3],
+        feature_channels=prior_encoder_param["unet_encoder_param"]
+        ["channels_list"][-3],
         combine_method=combine_method)
 
     self._latent_code_incorporation_level = latent_code_incorporation_level
@@ -446,7 +431,7 @@ class ConditionalVAE(torch.nn.Module):
     if self._encoder_class == DISCRETE_ENCODER:
       return discrete_kl_functional(self.prior_distribution,
                                     self.posterior_distribution)
-    
+
   def compute_regularization_loss(self):
     reg_loss = 0.0
     if self._encoder_class == DISCRETE_ENCODER:
@@ -460,7 +445,7 @@ class ConditionalVAE(torch.nn.Module):
       use_random: bool = True,
       top_k: Optional[int] = None,
       num_sample: int = 1
-      ) -> Tuple[Sequence[torch.Tensor], Sequence[torch.Tensor]]:
+  ) -> Tuple[Sequence[torch.Tensor], Sequence[torch.Tensor]]:
     """Returns the predictions and their probabilities."""
     if (self._encoder_class == "Discrete" and
         self._prior_encoder._code_book is None):

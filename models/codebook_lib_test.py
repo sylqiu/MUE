@@ -1,6 +1,6 @@
 import unittest
 import torch
-import codebook_lib
+from . import codebook_lib
 
 
 dim = 4
