@@ -2,12 +2,12 @@ from absl import logging
 from typing import Callable, Dict, Optional
 import torch
 from .configure_param import get_cvae_param, get_data_loader_param
-from ..datasets.data_loader_lib import DataLoader
-from ..datasets.data_io_lib import MASK_KEY, get_data_io_by_name
-from ..datasets.data_io_lib import IMAGE_KEY, GROUND_TRUTH_KEY, MASK_KEY
-from ..models.model_lib import ConditionalVAE
-from ..utils.plotting_lib import AverageMeter, log_scalar_dict
-from ..utils.loss_lib import combine_fedility_losses
+from datasets.data_loader_lib import DataLoader
+from datasets.data_io_lib import MASK_KEY, get_data_io_by_name
+from datasets.data_io_lib import IMAGE_KEY, GROUND_TRUTH_KEY, MASK_KEY
+from models.model_lib import ConditionalVAE
+from utils.plotting_lib import AverageMeter, log_scalar_dict
+from utils.loss_lib import combine_fedility_losses
 
 
 def combine_loss(loss_dict: Dict[str, torch.Tensor],

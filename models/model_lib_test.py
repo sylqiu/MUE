@@ -125,7 +125,6 @@ class TestModelLib(unittest.TestCase):
 
     infer = layer.inference(inputs)
     self.assertSequenceEqual(infer[0][0].shape, (BATCHSIZE, 1, HEIGHT, WIDTH))
-    print(infer[1:])
 
 
 if __name__ == '__main__':
