@@ -307,7 +307,8 @@ class DiscretePriorEncoder(torch.nn.Module):
     """Returns a probability vector of shape (B, code_book_size)."""
     return self.classification_probability
 
-  def sample(self, use_random: bool, num_sample: int) -> torch.Tensor:
+  def sample(self, use_random: bool,
+             num_sample: int) -> Tuple[torch.Tensor, torch.Tensor]:
     """Sample num_sample latent codes from the distribution, organized in the
     first dimension."""
     if use_random:
@@ -388,7 +389,7 @@ class ConditionalVAE(torch.nn.Module):
         combine_method=combine_method)
 
     self._latent_code_incorporation_level = latent_code_incorporation_level
-    
+
   def preprocess(self, **kwargs):
     if self._encoder_class == DISCRETE_ENCODER:
       self._posterior_encoder.initialize_code_book(**kwargs)
@@ -462,6 +463,7 @@ class ConditionalVAE(torch.nn.Module):
 
     # Latent codes and probabilities are organized in the first dimension.
     # We prioritize top-k sampling.
+    # probabilities of shape (num_sample, B)
     if top_k is not None:
       latent_codes, probabilities = self.prior_sample_top_k(top_k)
     else:
@@ -469,7 +471,7 @@ class ConditionalVAE(torch.nn.Module):
                                                       num_sample=num_sample)
 
     predictions = []
-
+    # each prediction of shape (B, C, H, W)
     for sample_index in range(latent_codes.shape[0]):
       latent_code = latent_codes[sample_index]
       decoder_inputs = self._latent_combination_layer(

@@ -1,3 +1,4 @@
+import os
 from absl import logging
 from typing import Callable, Dict, Optional, Sequence, Tuple
 import gin.torch
@@ -9,6 +10,7 @@ from datasets.data_io_lib import IMAGE_KEY, GROUND_TRUTH_KEY, MASK_KEY
 from models.model_lib import ConditionalVAE, DISCRETE_ENCODER, GAUSSIAN_ENCODER
 from utils.plotting_lib import AverageMeter, log_scalar_dict
 from utils.loss_lib import combine_fedility_losses, combine_loss, get_current_loss_config
+from eval_lib import eval
 
 
 def train_epoch(model: ConditionalVAE, data_loader: torch.utils.data.dataLoader,
@@ -74,16 +76,22 @@ def adaptive_code_book_initialization(model: ConditionalVAE,
 
 
 @gin.configurable
-def train(batch_size: int, num_epochs: int,
-          fidelity_loss_config_dict: Dict[str, float],
-          loss_weight_config_list: Sequence[Tuple[int, Dict[str, float]]],
-          initial_learning_rate: float, learning_rate_milestones: Dict[int,
-                                                                       float]):
+def train(
+    batch_size: int,
+    num_epochs: int,
+    base_save_path: str,
+    fidelity_loss_config_dict: Dict[str, float],
+    loss_weight_config_list: Sequence[Tuple[int, Dict[str, float]]],
+    initial_learning_rate: float,
+    learning_rate_milestones: Dict[int, float],
+    eval_epoch_interval: int = 10,
+):
   """The training function.
 
   Args:
       batch_size: The training batch size.
       num_epochs: The total number of epochs to train.
+      base_save_path: Where the data will be saved.
       fidelity_loss_config_dict: The fidelity losses to use and their weight.
       loss_weight_config_list: A list of (use_up_to_epoch, loss_weight_dict),
         where loss_weight_dict contains the weights for kl, data_fidelity and
@@ -91,13 +99,21 @@ def train(batch_size: int, num_epochs: int,
       initial_learning_rate: The initial learning rate.
       learning_rate_milestones: A dictionary of form {milestone: learning_rate},
         where if epoch > milestone, leanrning_rate will be used.
+      eval_epoch_interval: The number of epochs trained between intermediate
+        evaluation.
   """
 
   has_cuda = True if torch.cuda.is_available() else False
   device = torch.device("cuda" if has_cuda else "cpu")
 
-  dataset = DataLoader(**get_data_loader_param())
-  model = ConditionalVAE(**get_cvae_param()).to(device)
+  data_loader_param = get_data_loader_param()
+  dataset_name = data_loader_param["dataset_name"]
+  dataset = DataLoader(**data_loader_param)
+
+  model_param = get_cvae_param()
+  model_name = model_param.encoder_calss
+
+  model = ConditionalVAE(**model_param).to(device)
   train_loader = DataLoader(dataset,
                             batch_size=batch_size,
                             shuffle=True,
@@ -107,6 +123,8 @@ def train(batch_size: int, num_epochs: int,
   optimizer = torch.optim.Adam(model.parameters(), lr=initial_learning_rate)
   fidelity_loss_fn = combine_fedility_losses(fidelity_loss_config_dict)
   average_meter = AverageMeter()
+
+  dataset_model_token = "%s_%s" % (dataset_name, model_name)
 
   # perform adaptive code book initialization for discrete posterior encoder
   if model.get_encoder_class() == DISCRETE_ENCODER:
@@ -130,3 +148,16 @@ def train(batch_size: int, num_epochs: int,
                 optimizer=optimizer,
                 average_meter=average_meter,
                 device=device)
+
+    if (epoch_index + 1) % eval_epoch_interval == 0 or (epoch_index +
+                                                        1) == num_epochs:
+      torch.save(
+          model.state_dict(),
+          os.path.join(base_save_path, "train", dataset_model_token,
+                       "epoch_%d.pth"))
+      eval(model,
+           check_point_path=None,
+           use_random=False,
+           top_k=3,
+           num_sample=None,
+           base_save_path=base_save_path)
