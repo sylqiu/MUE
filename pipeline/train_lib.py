@@ -2,6 +2,7 @@ import os
 from absl import logging
 from typing import Callable, Dict, Optional, Sequence, Tuple
 import gin.torch
+from numpy import true_divide
 import torch
 from .configure_param import get_cvae_param, get_data_loader_param
 from datasets.data_loader_lib import DataLoader
@@ -76,16 +77,16 @@ def adaptive_code_book_initialization(model: ConditionalVAE,
 
 
 @gin.configurable
-def train(
-    batch_size: int,
-    num_epochs: int,
-    base_save_path: str,
-    fidelity_loss_config_dict: Dict[str, float],
-    loss_weight_config_list: Sequence[Tuple[int, Dict[str, float]]],
-    initial_learning_rate: float,
-    learning_rate_milestones: Dict[int, float],
-    eval_epoch_interval: int = 10,
-):
+def train(batch_size: int,
+          num_epochs: int,
+          base_save_path: str,
+          fidelity_loss_config_dict: Dict[str, float],
+          loss_weight_config_list: Sequence[Tuple[int, Dict[str, float]]],
+          initial_learning_rate: float,
+          learning_rate_milestones: Dict[int, float],
+          eval_epoch_interval: int = 10,
+          eval_top_k_samples: Optional[int] = 8,
+          eval_num_samples: Optional[int] = 8):
   """The training function.
 
   Args:
@@ -101,6 +102,10 @@ def train(
         where if epoch > milestone, leanrning_rate will be used.
       eval_epoch_interval: The number of epochs trained between intermediate
         evaluation.
+      eval_top_k_sample: If specified and supported by the model, use top-k
+        samples.
+      eval_num_sample: If specified and supported, use random sampling with
+        num_samples.
   """
 
   has_cuda = True if torch.cuda.is_available() else False
@@ -112,6 +117,11 @@ def train(
 
   model_param = get_cvae_param()
   model_name = model_param.encoder_calss
+
+  if model_name == GAUSSIAN_ENCODER:
+    eval_use_random = True
+  elif model_name == DISCRETE_ENCODER:
+    eval_use_random = False
 
   model = ConditionalVAE(**model_param).to(device)
   train_loader = DataLoader(dataset,
@@ -157,7 +167,7 @@ def train(
                        "epoch_%d.pth"))
       eval(model,
            check_point_path=None,
-           use_random=False,
-           top_k=3,
-           num_sample=None,
+           use_random=eval_use_random,
+           top_k=eval_top_k_samples,
+           num_sample=eval_num_samples,
            base_save_path=base_save_path)
