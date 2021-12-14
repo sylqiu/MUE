@@ -388,6 +388,10 @@ class ConditionalVAE(torch.nn.Module):
         combine_method=combine_method)
 
     self._latent_code_incorporation_level = latent_code_incorporation_level
+    
+  def preprocess(self, **kwargs):
+    if self._encoder_class == DISCRETE_ENCODER:
+      self._posterior_encoder.initialize_code_book(**kwargs)
 
   def forward(self, inputs: torch.Tensor, label: torch.Tensor) -> torch.Tensor:
     """Returns the prediction tensor, possibly need to be further processed by
@@ -478,3 +482,6 @@ class ConditionalVAE(torch.nn.Module):
     return predictions, torch.split(probabilities,
                                     probabilities.shape[0],
                                     dim=0)
+
+  def get_encoder_class(self):
+    return self._encoder_class

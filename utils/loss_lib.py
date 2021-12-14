@@ -1,4 +1,5 @@
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Sequence, Tuple
+import math
 import torch
 
 
@@ -62,19 +63,37 @@ def binary_segmentation_loss(prediction: torch.Tensor,
     return torch.divide(loss * mask, mask.sum())
 
 
-def combine_fedility_losses(fidelity_loss_names_dict: Dict[str, float]):
+def combine_fedility_losses(fidelity_loss_config_dict: Dict[str, float]):
   loss_mapping = {"binary_segmentation_loss": binary_segmentation_loss}
 
   def loss_fn(prediction: torch.Tensor, ground_truth: torch.Tensor,
               mask: Optional[torch.Tensor]):
     loss = 0.0
-    for name in fidelity_loss_names_dict:
+    for name in fidelity_loss_config_dict:
       if name in loss_mapping:
         loss += loss_mapping[name](prediction, ground_truth,
-                                   mask) * fidelity_loss_names_dict[name]
+                                   mask) * fidelity_loss_config_dict[name]
       else:
         raise NotImplementedError("%s is not defined in loss_lib!" % name)
 
     return loss
 
   return loss_fn
+
+
+def combine_loss(loss_dict: Dict[str, torch.Tensor],
+                 loss_weight_config: Dict[str, float]) -> torch.Tensor:
+  loss = 0.0
+  for key in loss_dict:
+    loss_dict += loss_dict[key] * loss_weight_config[key]
+
+  return loss
+
+
+def get_current_loss_config(
+    current_epoch: int,
+    loss_weight_config_list: Sequence[Tuple[int, Dict[str, float]]]):
+  loss_weight_config_list[-1][0] = math.inf
+  current_config_index = min(loss_weight_config_list,
+                             key=lambda x: x[0] < current_epoch)
+  return loss_weight_config_list[current_config_index][1]
