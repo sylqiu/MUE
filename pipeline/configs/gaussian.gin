@@ -1,4 +1,3 @@
-get_gaussian_encoder_param.latent_code_level = 1
 get_gaussian_encoder_param.latent_code_dimension = 16
 
 get_cvae_param.encoder_class = "Gaussian"

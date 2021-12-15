@@ -1,6 +1,6 @@
 import unittest
 import torch
-import layer_lib
+from . import layer_lib
 
 HAS_CUDA = torch.cuda.is_available()
 BATCHSIZE = 2

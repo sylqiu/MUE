@@ -1,8 +1,6 @@
-get_discrete_posterior_encoder_param.latent_code_level = 0
 get_discrete_posterior_encoder_param.latent_code_dimension = 128
 get_discrete_posterior_encoder_param.code_book_size = 512
 
-get_discrete_prior_encoder_param.latent_code_level = 0
 get_discrete_prior_encoder_param.latent_code_dimension = 128
 get_discrete_prior_encoder_param.code_book_size = 512
 
@@ -13,5 +11,9 @@ get_cvae_param.label_combination_layer_output_channels = 8
 get_cvae_param.latent_code_dimension = 128
 get_cvae_param.latent_code_incorporation_level = 4
 get_cvae_param.combine_method = "concat"
+
+train.batch_size = 16
+train.num_epochs = 64
+train.fidelity_loss_names_dict = 
 
 
