@@ -1,9 +1,10 @@
 import os
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+from typing import Dict, Sequence, Union
 from absl import logging
 import torch
 from PIL.Image import open as imread
+from PIL.Image import Image
 import numpy as np
 
 IMAGE_KEY = "image"
@@ -26,6 +27,10 @@ class DataIO(ABC):
 
   @abstractmethod
   def get_all_ground_truth_modes(self, input_index: int):
+    pass
+  
+  @abstractmethod
+  def get_ground_truth_modes_probabilities(self, input_index: int):
     pass
 
 
@@ -51,7 +56,7 @@ class LIDC_IDRI(DataIO):
                         self.data_list[input_index].replace(".png", "_l%d.png"))
 
   def get_data(self, input_index: int,
-               output_selection_index: int) -> Dict[str, Any]:
+               output_selection_index: int) -> Dict[str, Union[Image, str]]:
     image_name = os.path.join(self.data_path_root, "images",
                               self.data_list[input_index])
     ground_truth_name = self._get_ground_truth_name_format(input_index) % (
@@ -69,10 +74,13 @@ class LIDC_IDRI(DataIO):
   def sample_output_selection_index(self):
     return torch.randint(0, 4, (1,)).item()
 
-  def get_all_ground_truth_modes(self, input_index: int):
+  def get_all_ground_truth_modes(self, input_index: int) -> Sequence[Image]:
     modes_list = []
     ground_truth_name_format = self._get_ground_truth_name_format(input_index)
     for mode_index in range(4):
       modes_list.append(imread(ground_truth_name_format % (mode_index)))
 
     return modes_list
+  
+  def get_ground_truth_modes_probabilities(self, input_index: int):
+    return None

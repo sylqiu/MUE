@@ -1,13 +1,15 @@
 import os
 from absl import logging
+from tqdm import tqdm
 from typing import Callable, Dict, Optional, Sequence, Tuple
 import gin.torch
 import torch
 import numpy as np
 from .configure_param import get_cvae_param, get_data_loader_param
 from datasets.data_loader_lib import DataLoader
-from datasets.data_io_lib import IMAGE_KEY, ITEM_NAME_KEY
+from datasets.data_io_lib import IMAGE_KEY, ITEM_NAME_KEY, DataIO, get_data_io_by_name
 from models.model_lib import ConditionalVAE, DISCRETE_ENCODER, GAUSSIAN_ENCODER
+from generalized_energy_distance_lib import get_energy_distance_components, calc_energy_distances
 
 
 def argmax_post_processing(predictions: Sequence[torch.Tensor]) -> np.ndarray:
@@ -142,6 +144,7 @@ def eval(model: Optional[ConditionalVAE], check_point_path: Optional[str],
 @gin.configurable
 def read_samples(base_save_path: str, dataset_name: str, model_name: str,
                  item_name: str, num_sample: int) -> np.ndarray:
+  """Return samples has shape [num_samples, B, C, H, W]."""
   path = get_samples_save_path(base_save_path, model_name, dataset_name,
                                item_name, num_sample)
   try:
@@ -163,3 +166,74 @@ def read_probs(base_save_path: str, dataset_name: str, model_name: str,
     raise ValueError("Could not load %s!" % path)
 
   return probs
+
+
+@gin.configurable
+class Evaluator:
+
+  def __init__(self, num_cvae_samples: int, num_testing_items: int,
+               num_gt_modes: int, eval_class_ids: Sequence[int],
+               dataset_name: DataIO, data_path_root: str,
+               metric_fn: Callable[..., float], use_pred_probability: bool):
+
+    self.eval_class_ids = eval_class_ids
+    self.data_io = get_data_io_by_name(dataset_name)(data_path_root, "test")
+    self.metric_fn = metric_fn
+    self.d_matrices = {
+        'YS':
+            np.zeros(shape=(num_testing_items, num_gt_modes, num_cvae_samples,
+                            len(eval_class_ids)),
+                     dtype=np.float32),
+        'YY':
+            np.ones(shape=(num_testing_items, num_gt_modes, num_cvae_samples,
+                           len(eval_class_ids)),
+                    dtype=np.float32),
+        'SS':
+            np.ones(shape=(num_testing_items, num_gt_modes, num_cvae_samples,
+                           len(eval_class_ids)),
+                    dtype=np.float32)
+    }
+    if self.data_io.get_ground_truth_modes_probabilities(0) is None:
+      self.gt_probability = None
+    else:
+      self.gt_probability = []
+
+    if use_pred_probability:
+      self.sample_probability = []
+    else:
+      self.sample_probability = None
+
+  def compute_for_item(self, item_index, item_name):
+    samples = read_samples(item_name=item_name)
+    if self.gt_probability is not None:
+      self.gt_probability.append(
+          np.stack(
+              self.data_io.get_ground_truth_modes_probabilities(item_index),
+              axis=0))
+
+    if self.sample_probability is not None:
+      self.sample_probability.append(read_probs(item_name=item_name))
+
+    gt_modes_list = self.data_io.get_all_ground_truth_modes(item_index)
+    gt_modes = np.stack(gt_modes_list, axis=0)
+
+    energy_dist = get_energy_distance_components(
+        gt_modes=gt_modes,
+        samples=samples,
+        mask=None,
+        eval_class_ids=self.eval_class_ids,
+        compute_metric=self.metric_fn)
+
+    # print(energy_dist)
+    for k in self.d_matrices.keys():
+      self.d_matrices[k][item_index] = energy_dist[k]
+
+  def compute_overall_energy_distance(self) -> Sequence[float]:
+    if self.gt_probability is not None:
+      gt_probability = np.stack(self.gt_probability, axis=0)
+
+    if self.sample_probability is not None:
+      sample_probability = np.stack(self.sample_probability, axis=0)
+
+    return calc_energy_distances(self.d_matrices, sample_probability,
+                                 gt_probability)

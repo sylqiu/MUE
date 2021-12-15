@@ -3,9 +3,9 @@ import numpy as np
 
 
 def get_energy_distance_components(
-    gt_seg_modes: np.ndarray, seg_samples: np.ndarray,
+    gt_modes: np.ndarray, samples: np.ndarray,
     mask: Optional[np.ndarray], eval_class_ids: Union[int, Sequence[int]],
-    compute_metric: Callable[..., np.ndarray]) -> Dict[str, np.ndarray]:
+    compute_metric: Callable[..., float]) -> Dict[str, np.ndarray]:
   """Calculates the components for a metric-based generalized energy distance
   given an array holding all ground truths and an array holding all samples.
   
@@ -22,8 +22,8 @@ def get_energy_distance_components(
   Returns:
     A dictionary containing the three energy distance components.
   """
-  num_modes = gt_seg_modes.shape[0]
-  num_samples = seg_samples.shape[0]
+  num_modes = gt_modes.shape[0]
+  num_samples = samples.shape[0]
 
   if isinstance(eval_class_ids, int):
     eval_class_ids = list(range(eval_class_ids))
@@ -45,7 +45,7 @@ def get_energy_distance_components(
 
     # iterate the samples S
     for i in range(num_samples):
-      d_matrix_YS[mode, i] = compute_metric(gt_seg_modes[mode], seg_samples[i],
+      d_matrix_YS[mode, i] = compute_metric(gt_modes[mode], samples[i],
                                             mask, eval_class_ids)
 
     ###########################################
@@ -55,7 +55,7 @@ def get_energy_distance_components(
 
     # iterate the ground-truth modes Y' while exploiting the pair-wise symmetries for efficiency
     for mode_2 in range(mode, num_modes):
-      metric = compute_metric(gt_seg_modes[mode], gt_seg_modes[mode_2], mask,
+      metric = compute_metric(gt_modes[mode], gt_modes[mode_2], mask,
                               eval_class_ids)
       d_matrix_YY[mode, mode_2] = metric
       d_matrix_YY[mode_2, mode] = metric
@@ -70,7 +70,7 @@ def get_energy_distance_components(
     # iterate all samples S'
     for j in range(i, num_samples):
 
-      metric = compute_metric(seg_samples[i], seg_samples[j], mask,
+      metric = compute_metric(samples[i], samples[j], mask,
                               eval_class_ids)
       d_matrix_SS[i, j] = metric
       d_matrix_SS[j, i] = metric
@@ -80,17 +80,17 @@ def get_energy_distance_components(
 
 def calc_energy_distances(
     d_matrices: Dict[str, np.ndarray],
-    source_probability_weighted: Optional[np.ndarray] = None,
-    target_probability_weighted: Optional[np.ndarray] = None) -> float:
+    pred_sample_probability: Optional[np.ndarray] = None,
+    gt_probability: Optional[np.ndarray] = None) -> np.ndarray:
   """Calculate the energy distance for each image based on matrices holding the
   combinatorial distances.
   
   Args:
     d_matrices: A dictionary containing the energy distance components of each
        testing sample, respectively stacked along the first dimension.
-    source_probability_weighted: probability vector of shape
+    pred_sample_probability: probability vector of shape
       (num_testing_sample, num_samples)
-    target_probability_weighted: probability vector of shape
+    gt_probability: probability vector of shape
       (num_testing_sample, num_modes)
     
   Returns:
@@ -101,15 +101,16 @@ def calc_energy_distances(
 
   # perform a nanmean over the class axis so as to not factor in classes that are not present in
   # both the ground-truth mode as well as the sampled prediction
-  if (target_probability_weighted
-      is not None) and (source_probability_weighted is None):
+  if (gt_probability
+      is not None) and (pred_sample_probability is None):
 
-    mode_probs = target_probability_weighted
+    mode_probs = gt_probability
 
     mean_d_YS = np.nanmean(d_matrices['YS'], axis=-1)  # average over classes
     mean_d_YS = np.mean(
         mean_d_YS, axis=2
-    )  # average over source i.e. samples, since no source probability is provided
+    )
+    # average over source i.e. samples, since no source probability is provided
     mean_d_YS = mean_d_YS * mode_probs
     d_YS = np.sum(mean_d_YS, axis=1)
 
@@ -121,9 +122,9 @@ def calc_energy_distances(
                  mode_probs[:, np.newaxis, :])
     d_YY = np.sum(mean_d_YY, axis=(1, 2))
 
-  elif (target_probability_weighted is None) and (source_probability_weighted
+  elif (gt_probability is None) and (pred_sample_probability
                                                   is not None):
-    mode_probs = source_probability_weighted
+    mode_probs = pred_sample_probability
 
     mean_d_YS = np.nanmean(d_matrices['YS'], axis=-1)
     mean_d_YS = np.mean(mean_d_YS, axis=1)  # average over target
@@ -138,10 +139,10 @@ def calc_energy_distances(
                  mode_probs[:, np.newaxis, :])
     d_SS = np.sum(mean_d_SS, axis=(1, 2))
 
-  elif (target_probability_weighted
-        is not None) and (source_probability_weighted is not None):
-    mode_probs_target = target_probability_weighted
-    mode_probs_source = source_probability_weighted
+  elif (gt_probability
+        is not None) and (pred_sample_probability is not None):
+    mode_probs_target = gt_probability
+    mode_probs_source = pred_sample_probability
 
     mean_d_YS = np.nanmean(d_matrices['YS'], axis=-1)
     mean_d_YS = (mean_d_YS * mode_probs_target[:, :, np.newaxis] *
