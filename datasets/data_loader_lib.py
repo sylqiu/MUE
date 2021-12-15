@@ -3,7 +3,7 @@ import gin.torch
 import torch
 import torchvision.transforms.functional as TF
 import numpy as np
-from .data_io_lib import get_data_io_by_name, IMAGE_KEY, GROUND_TRUTH_KEY, MODE_ID_KEY
+from .data_io_lib import get_data_io_by_name, IMAGE_KEY, ITEM_NAME_KEY, GROUND_TRUTH_KEY, MODE_ID_KEY
 
 MAX_INT8 = 255.0
 
@@ -14,7 +14,7 @@ def to_numpy(pil_image: Any) -> np.ndarray:
 
 def conform_channel_dim(image: np.ndarray):
   if len(image.shape) == 2:
-    # add one singleton dimension.
+    # for black and white image: add one singleton channel dimension.
     return image[np.newaxis, ...]
   elif len(image.shape) == 3:
     return image
@@ -100,13 +100,15 @@ class DataLoader(torch.utils.data.dataset):
                                                                          int]],
                random_height_width_ratio_range: Optional[Tuple[float, float]],
                random_rotate_angle_range: Optional[Tuple[float, float]],
-               use_random_flip: bool, is_training: bool):
+               use_random_flip: bool, is_training: bool,
+               has_ground_truth: bool):
     self._data_io_class = get_data_io_by_name(dataset_name)
     self._random_crop_size = random_crop_size
     self._random_rotate_angle_range = random_rotate_angle_range
     self._use_random_flip = use_random_flip
     self._random_height_width_ratio_range = random_height_width_ratio_range
     self._is_training = is_training
+    self._has_ground_truth = has_ground_truth
 
   def __getitem__(self, input_index: int):
     if self._is_training:
@@ -115,17 +117,30 @@ class DataLoader(torch.utils.data.dataset):
       mode_id = 0
 
     data_dict = self._data_io_class.get_data(input_index, mode_id)
+    item_name = data_dict[ITEM_NAME_KEY]
+    image_dict = {
+        IMAGE_KEY: data_dict[IMAGE_KEY],
+    }
 
-    if self._random_crop_size:
-      data_dict = random_crop(data_dict, self._random_crop_size,
-                              self._random_height_width_ratio_range)
-    if self._use_random_flip:
-      data_dict = random_flip(data_dict)
-    if self._random_rotate_angle_range:
-      data_dict = random_rotate(data_dict, self._random_rotate_angle_range)
+    if self._has_ground_truth:
+      image_dict[GROUND_TRUTH_KEY] = data_dict[IMAGE_KEY]
 
-    data_dict = package_image_data(data_dict)
+      if self._random_crop_size:
+        image_dict = random_crop(image_dict, self._random_crop_size,
+                                 self._random_height_width_ratio_range)
+      if self._use_random_flip:
+        image_dict = random_flip(image_dict)
+      if self._random_rotate_angle_range:
+        image_dict = random_rotate(image_dict, self._random_rotate_angle_range)
+
+    image_dict = package_image_data(image_dict)
+
+    data_dict[IMAGE_KEY] = image_dict[IMAGE_KEY]
     data_dict[MODE_ID_KEY] = mode_id
+    data_dict[ITEM_NAME_KEY] = item_name
+
+    if self._has_ground_truth:
+      data_dict[GROUND_TRUTH_KEY] = image_dict[GROUND_TRUTH_KEY]
 
     return data_dict
 

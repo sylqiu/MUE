@@ -9,16 +9,18 @@ class QuantizeEMA(nn.Module):
   def __init__(self,
                dim: int,
                n_embed: int,
+               init_mean: torch.Tensor,
+               init_std: torch.Tensor,
                decay: float = 0.99,
-               init_mean: float = 0,
-               init_std: float = 1):
+               ):
     """ 
     Args:
       dim: The dimension of the code.
       n_embed: Total number of codes in the code book.
+      init_mean: The mean of initialization distribution, per channel.
+      init_std: The standard deviation of the initialization distribution, per
+        channel.
       decay: Exponential moving average decay.
-      init_mean: The mean of initialization distribution.
-      init_std: The standard deviation of the initialization distribution.
     """
     super().__init__()
 
