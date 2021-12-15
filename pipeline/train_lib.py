@@ -69,7 +69,7 @@ def train(batch_size: int, num_epochs: int,
 
   dataset = DataLoader(**get_data_loader_param())
   model = ConditionalVAE(**get_cvae_param()).to(device)
-  train_loader = DataLoader(dataset,
+  train_loader = torch.utils.data.DataLoader(dataset,
                             batch_size=batch_size,
                             shuffle=True,
                             num_workers=4,
