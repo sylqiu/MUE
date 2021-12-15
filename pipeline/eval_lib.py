@@ -61,6 +61,20 @@ def get_final_processing_layer(
   return predictions_processing_layer, probabilities_processing_layer
 
 
+def get_samples_save_path(base_save_path: str, model_name: str,
+                          dataset_name: str, item_name: str, num_sample: int):
+  dataset_model_token = "%s_%s" % (dataset_name, model_name)
+  return os.path.join(base_save_path, "eval", dataset_model_token, "images",
+                      "%s_%dsamples.npy" % (item_name, num_sample))
+
+
+def get_probs_save_path(base_save_path: str, model_name: str, dataset_name: str,
+                        item_name: str, num_sample: int):
+  dataset_model_token = "%s_%s" % (dataset_name, model_name)
+  os.path.join(base_save_path, "eval", dataset_model_token, "quantities",
+               "%s_%dprobs.npy" % (item_name, num_sample))
+
+
 def save_results(base_save_path: str, model_name: str, dataset_name: str,
                  item_name: str, num_sample: int,
                  predictions: Sequence[torch.Tensor],
@@ -73,12 +87,12 @@ def save_results(base_save_path: str, model_name: str, dataset_name: str,
                                  model_name=model_name))
   dataset_model_token = "%s_%s" % (dataset_name, model_name)
   np.save(
-      os.path.join(base_save_path, "eval", dataset_model_token, "images",
-                   "%s_%dsamples.npy" % (item_name, num_sample)),
+      get_samples_save_path(base_save_path, model_name, dataset_name, item_name,
+                            num_sample),
       predictions_processing_layer(predictions))
   np.save(
-      os.path.join(base_save_path, "eval", dataset_model_token, "quantities",
-                   "%s_%dprobs.npy" % (item_name, num_sample)),
+      get_probs_save_path(base_save_path, model_name, dataset_name, item_name,
+                          num_sample),
       probabilities_processing_layer(probabilities))
 
 
@@ -123,3 +137,29 @@ def eval(model: Optional[ConditionalVAE], check_point_path: Optional[str],
                  num_sample=num_sample,
                  predictions=predictions,
                  probabilities=probabilities)
+
+
+@gin.configurable
+def read_samples(base_save_path: str, dataset_name: str, model_name: str,
+                 item_name: str, num_sample: int) -> np.ndarray:
+  path = get_samples_save_path(base_save_path, model_name, dataset_name,
+                               item_name, num_sample)
+  try:
+    samples = np.load(path)
+  except:
+    raise ValueError("Could not load %s!" % path)
+
+  return samples
+
+
+@gin.configurable
+def read_probs(base_save_path: str, dataset_name: str, model_name: str,
+               item_name: str, num_sample: int) -> np.ndarray:
+  path = get_probs_save_path(base_save_path, model_name, dataset_name,
+                             item_name, num_sample)
+  try:
+    probs = np.load(path)
+  except:
+    raise ValueError("Could not load %s!" % path)
+
+  return probs

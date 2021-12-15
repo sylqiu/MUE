@@ -2,7 +2,6 @@ import os
 from absl import logging
 from typing import Callable, Dict, Optional, Sequence, Tuple
 import gin.torch
-from numpy import true_divide
 import torch
 from .configure_param import get_cvae_param, get_data_loader_param
 from datasets.data_loader_lib import DataLoader
