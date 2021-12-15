@@ -97,6 +97,7 @@ class TestModelLib(unittest.TestCase):
         LATENT_CODE_DIMENSIONS)
     inputs = torch.ones((BATCHSIZE, LATENT_CODE_DIMENSIONS, HEIGHT, WIDTH),
                         dtype=torch.float32)
+
     layer = model_lib.DiscretePriorEncoder(**PARAM)
     layer.get_code_book(torch.ones((128, 512), dtype=torch.float32))
     outputs = layer(inputs)
@@ -125,6 +126,19 @@ class TestModelLib(unittest.TestCase):
 
     infer = layer.inference(inputs)
     self.assertSequenceEqual(infer[0][0].shape, (BATCHSIZE, 1, HEIGHT, WIDTH))
+
+    labels = torch.ones((BATCHSIZE, 1, HEIGHT, WIDTH),
+                    dtype=torch.float32)                
+    PARAM = configure_param.get_cvae_param()
+    layer = model_lib.ConditionalVAE(**PARAM)
+    outputs = layer(inputs, labels)
+    self.assertSequenceEqual(outputs.shape,
+                         (BATCHSIZE, 1, HEIGHT, WIDTH))
+
+    infer = layer.inference(inputs)
+    self.assertSequenceEqual(infer[0][0].shape,
+                         (BATCHSIZE, 1, HEIGHT, WIDTH))
+
 
 
 if __name__ == '__main__':

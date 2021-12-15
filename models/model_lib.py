@@ -92,10 +92,8 @@ class LatentCombinationLayer(torch.nn.Module):
               feature: torch.Tensor) -> torch.Tensor:
     height, width = feature.shape[2:4]
     if len(latent_code.shape) == 2:
-      #latent_code = torch.tile(latent_code, (1, 1, height, width//latent_code.shape[1]))
-      latent_code = torch.tile(
-          latent_code, (feature.shape[0], latent_code.shape[1], height, width))
-      latent_code = latent_code[:, :, :height, :width]
+      latent_code = latent_code.view(feature.shape[0], -1, 1, 1)
+      latent_code = torch.tile(latent_code, (1, 1, height, width)
     elif len(latent_code.shape) == 4:
       latent_code = torch.nn.functional.interpolate(latent_code,
                                                     (height, width))
