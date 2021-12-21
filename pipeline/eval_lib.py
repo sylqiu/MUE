@@ -63,23 +63,29 @@ def get_final_processing_layer(
   return predictions_processing_layer, probabilities_processing_layer
 
 
-def get_samples_save_path(base_save_path: str, model_name: str,
-                          dataset_name: str, item_name: str, num_sample: int):
+def get_samples_save_path(base_save_path: str, epoch_index: Optional[int],
+                          model_name: str, dataset_name: str, item_name: str,
+                          num_sample: int):
   dataset_model_token = "%s_%s" % (dataset_name, model_name)
-  return os.path.join(base_save_path, "eval", dataset_model_token, "images",
-                      "%s_%dsamples.npy" % (item_name, num_sample))
+  eval_foldername = "eval_%d_epoch" % (
+      epoch_index) if epoch_index is not None else "eval"
+  return os.path.join(base_save_path, eval_foldername, dataset_model_token,
+                      "images", "%s_%dsamples.npy" % (item_name, num_sample))
 
 
-def get_probs_save_path(base_save_path: str, model_name: str, dataset_name: str,
-                        item_name: str, num_sample: int):
+def get_probs_save_path(base_save_path: str, epoch_index: Optional[int],
+                        model_name: str, dataset_name: str, item_name: str,
+                        num_sample: int):
   dataset_model_token = "%s_%s" % (dataset_name, model_name)
-  os.path.join(base_save_path, "eval", dataset_model_token, "quantities",
-               "%s_%dprobs.npy" % (item_name, num_sample))
+  eval_foldername = "eval_%d_epoch" % (
+      epoch_index) if epoch_index is not None else "eval"
+  os.path.join(base_save_path, eval_foldername, dataset_model_token,
+               "quantities", "%s_%dprobs.npy" % (item_name, num_sample))
 
 
-def save_results(base_save_path: str, model_name: str, dataset_name: str,
-                 item_name: str, num_sample: int,
-                 predictions: Sequence[torch.Tensor],
+def save_results(base_save_path: str, epoch_index: Optional[int],
+                 model_name: str, dataset_name: str, item_name: str,
+                 num_sample: int, predictions: Sequence[torch.Tensor],
                  probabilities: Sequence[torch.Tensor]):
   logging.info("saving results for %s model, %s, item %s" %
                (model_name, dataset_name, item_name))
@@ -87,21 +93,20 @@ def save_results(base_save_path: str, model_name: str, dataset_name: str,
   predictions_processing_layer, probabilities_processing_layer = (
       get_final_processing_layer(dataset_name=dataset_name,
                                  model_name=model_name))
-  dataset_model_token = "%s_%s" % (dataset_name, model_name)
   np.save(
-      get_samples_save_path(base_save_path, model_name, dataset_name, item_name,
-                            num_sample),
+      get_samples_save_path(base_save_path, epoch_index, model_name,
+                            dataset_name, item_name, num_sample),
       predictions_processing_layer(predictions))
   np.save(
-      get_probs_save_path(base_save_path, model_name, dataset_name, item_name,
-                          num_sample),
+      get_probs_save_path(base_save_path, epoch_index, model_name, dataset_name,
+                          item_name, num_sample),
       probabilities_processing_layer(probabilities))
 
 
 @gin.configurable
 def eval(model: Optional[ConditionalVAE], check_point_path: Optional[str],
          use_random: bool, top_k: Optional[int], num_sample: Optional[int],
-         base_save_path: str):
+         base_save_path: str, epoch_index: Optional[int]):
   has_cuda = True if torch.cuda.is_available() else False
   device = torch.device("cuda" if has_cuda else "cpu")
   Tensor = torch.cuda.FloatTensor if device == "cuda" else torch.FloatTensor
@@ -133,6 +138,7 @@ def eval(model: Optional[ConditionalVAE], check_point_path: Optional[str],
                                                  top_k=top_k,
                                                  num_sample=num_sample)
     save_results(base_save_path=base_save_path,
+                 epoch_index=epoch_index,
                  model_name=model_name,
                  dataset_name=dataset_name,
                  item_name=item_name,

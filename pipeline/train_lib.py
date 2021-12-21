@@ -124,11 +124,11 @@ def train(batch_size: int,
 
   model = ConditionalVAE(**model_param).to(device)
   train_loader = torch.utils.data.DataLoader(dataset,
-                            batch_size=batch_size,
-                            shuffle=True,
-                            num_workers=4,
-                            pin_memory=True,
-                            sampler=None)
+                                             batch_size=batch_size,
+                                             shuffle=True,
+                                             num_workers=4,
+                                             pin_memory=True,
+                                             sampler=None)
   optimizer = torch.optim.Adam(model.parameters(), lr=initial_learning_rate)
   fidelity_loss_fn = combine_fedility_losses(fidelity_loss_config_dict)
   average_meter = AverageMeter()
@@ -169,4 +169,5 @@ def train(batch_size: int,
            use_random=eval_use_random,
            top_k=eval_top_k_samples,
            num_sample=eval_num_samples,
-           base_save_path=base_save_path)
+           base_save_path=base_save_path,
+           epoch_index=epoch_index)
