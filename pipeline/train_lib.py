@@ -115,7 +115,7 @@ def train(batch_size: int,
   dataset = DataLoader(**data_loader_param)
 
   model_param = get_cvae_param()
-  model_name = model_param.encoder_calss
+  model_name = model_param.encoder_class
 
   if model_name == GAUSSIAN_ENCODER:
     eval_use_random = True
@@ -123,7 +123,7 @@ def train(batch_size: int,
     eval_use_random = False
 
   model = ConditionalVAE(**model_param).to(device)
-  train_loader = DataLoader(dataset,
+  train_loader = torch.utils.data.DataLoader(dataset,
                             batch_size=batch_size,
                             shuffle=True,
                             num_workers=4,

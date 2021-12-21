@@ -7,6 +7,7 @@ from .layer_lib import Conv2DReLUNorm, ResidualBlock
 from .module_lib import UnetEncoder, UnetDecoder
 from utils.loss_lib import gaussian_kl_functional, discrete_kl_functional
 
+
 GAUSSIAN_ENCODER = "Gaussian"
 DISCRETE_ENCODER = "Discrete"
 
@@ -92,8 +93,10 @@ class LatentCombinationLayer(torch.nn.Module):
               feature: torch.Tensor) -> torch.Tensor:
     height, width = feature.shape[2:4]
     if len(latent_code.shape) == 2:
+
       latent_code = latent_code.view(feature.shape[0], -1, 1, 1)
-      latent_code = torch.tile(latent_code, (1, 1, height, width)
+      latent_code = torch.tile(latent_code, (1, 1, height, width))
+
     elif len(latent_code.shape) == 4:
       latent_code = torch.nn.functional.interpolate(latent_code,
                                                     (height, width))

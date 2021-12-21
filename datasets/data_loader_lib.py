@@ -94,7 +94,7 @@ def random_rotate(
   }
 
 
-class DataLoader(torch.utils.data.dataset):
+class DataLoader(torch.utils.data.Dataset):
 
   def __init__(self, dataset_name: str, random_crop_size: Optional[Tuple[int,
                                                                          int]],
@@ -109,6 +109,9 @@ class DataLoader(torch.utils.data.dataset):
     self._random_height_width_ratio_range = random_height_width_ratio_range
     self._is_training = is_training
     self._has_ground_truth = has_ground_truth
+
+  def __len__(self):
+    return self._data_io_class.length
 
   def __getitem__(self, input_index: int):
     if self._is_training:
@@ -143,6 +146,7 @@ class DataLoader(torch.utils.data.dataset):
       data_dict[GROUND_TRUTH_KEY] = image_dict[GROUND_TRUTH_KEY]
 
     return data_dict
+
 
   def get_all_ground_truth_modes(self,
                                  input_index: int) -> Sequence[np.ndarray]:

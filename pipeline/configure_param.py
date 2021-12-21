@@ -174,12 +174,13 @@ def get_data_loader_param(
     dataset_name: str, random_crop_size: Optional[Tuple[int, int]],
     random_height_width_ratio_range: Optional[Tuple[float, float]],
     random_rotate_angle_range: Optional[Tuple[float, float]],
-    use_random_flip: bool, is_training: bool):
+    use_random_flip: bool, is_training: bool, has_ground_truth: bool):
   return {
       "dataset_name": dataset_name,
       "random_crop_size": random_crop_size,
       "random_height_width_ratio_range": random_height_width_ratio_range,
-      "random_rotat,e_angle_range": random_rotate_angle_range,
+      "random_rotate_angle_range": random_rotate_angle_range,
       "use_random_flip": use_random_flip,
-      "is_training": is_training
+      "is_training": is_training,
+      "has_ground_truth": has_ground_truth
   }

@@ -14,7 +14,7 @@ class TestCodebookLib(unittest.TestCase):
     def test_quantizeema(self):
         inputs = torch.ones((BATCHSIZE, INPUT_CHANNELS, HEIGHT, WIDTH),
                         dtype=torch.float32)
-        layer = codebook_lib.QuantizeEMA(dim, n_embed)
+        layer = codebook_lib.QuantizeEMA(dim, n_embed, 0, 1)
         outputs = layer(inputs)
 
         self.assertSequenceEqual([outputs[0].shape, outputs[1].shape, outputs[2].shape],

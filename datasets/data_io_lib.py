@@ -36,7 +36,7 @@ class DataIO(ABC):
 
 def get_data_io_by_name(dataset_name: str) -> DataIO:
   if dataset_name == "LIDC_IDRI":
-    return LIDC_IDRI
+    return LIDC_IDRI()
   else:
     raise NotImplementedError
 
@@ -46,7 +46,7 @@ class LIDC_IDRI(DataIO):
   def __init__(self, data_path_root: str, split: str):
     file_list = tuple(
         open(os.path.join(data_path_root, "%s.txt" % (split)), "r"))
-    self.data_list = [id_.rstrip() for id_ in file_list]
+    self.data_list = [id_.rstrip() for id_ in file_list] 
     self.length = len(self.data_list)
     self.data_path_root = os.path.join(data_path_root, split)
     logging.info("%s split contains %d images" % (split, self.length))
