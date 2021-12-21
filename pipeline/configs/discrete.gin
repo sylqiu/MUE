@@ -12,8 +12,5 @@ get_cvae_param.latent_code_dimension = 128
 get_cvae_param.latent_code_incorporation_level = 4
 get_cvae_param.combine_method = "concat"
 
-train.batch_size = 16
-train.num_epochs = 64
-train.fidelity_loss_names_dict = 
 
 

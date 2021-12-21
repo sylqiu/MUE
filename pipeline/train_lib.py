@@ -33,7 +33,7 @@ def train_epoch(model: ConditionalVAE, data_loader: torch.utils.data.dataLoader,
 
     loss_dict = {}
     loss_dict["kl"] = model.compute_kl_divergence()
-    loss_dict["data fidelity"] = fidelity_loss_fn(prediction, ground_truth,
+    loss_dict["data_fidelity"] = fidelity_loss_fn(prediction, ground_truth,
                                                   mask)
     loss_dict["regularization"] = model.compute_regularization_loss()
 
