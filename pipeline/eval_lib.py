@@ -142,30 +142,35 @@ def eval(model: Optional[ConditionalVAE], check_point_path: Optional[str],
 
 
 @gin.configurable
-def read_samples(base_save_path: str, dataset_name: str, model_name: str,
-                 item_name: str, num_sample: int) -> np.ndarray:
-  """Return samples has shape [num_samples, B, C, H, W]."""
-  path = get_samples_save_path(base_save_path, model_name, dataset_name,
-                               item_name, num_sample)
-  try:
-    samples = np.load(path)
-  except:
-    raise ValueError("Could not load %s!" % path)
+class EvalIO:
 
-  return samples
+  def __init__(self, base_save_path: str, dataset_name: str, model_name: str,
+               num_sample: int):
+    self.base_save_path = base_save_path
+    self.dataset_name = dataset_name
+    self.model_name = model_name
+    self.num_sample = num_sample
 
+  def read_samples(self, item_name: str) -> np.ndarray:
+    """Return samples has shape [num_samples, B, C, H, W]."""
+    path = get_samples_save_path(self.base_save_path, self.model_name,
+                                 self.dataset_name, item_name, self.num_sample)
+    try:
+      samples = np.load(path)
+    except:
+      raise ValueError("Could not load %s!" % path)
 
-@gin.configurable
-def read_probs(base_save_path: str, dataset_name: str, model_name: str,
-               item_name: str, num_sample: int) -> np.ndarray:
-  path = get_probs_save_path(base_save_path, model_name, dataset_name,
-                             item_name, num_sample)
-  try:
-    probs = np.load(path)
-  except:
-    raise ValueError("Could not load %s!" % path)
+    return samples
 
-  return probs
+  def read_probs(self, item_name: str) -> np.ndarray:
+    path = get_probs_save_path(self.base_save_path, self.model_name,
+                               self.dataset_name, item_name, self.num_sample)
+    try:
+      probs = np.load(path)
+    except:
+      raise ValueError("Could not load %s!" % path)
+
+    return probs
 
 
 @gin.configurable
@@ -177,6 +182,7 @@ class Evaluator:
                metric_fn: Callable[..., float], use_pred_probability: bool):
 
     self.eval_class_ids = eval_class_ids
+    self.eval_io = EvalIO()
     self.data_io = get_data_io_by_name(dataset_name)(data_path_root, "test")
     self.metric_fn = metric_fn
     self.d_matrices = {
@@ -204,7 +210,7 @@ class Evaluator:
       self.sample_probability = None
 
   def compute_for_item(self, item_index, item_name):
-    samples = read_samples(item_name=item_name)
+    samples = self.eval_io.read_samples(item_name=item_name)
     if self.gt_probability is not None:
       self.gt_probability.append(
           np.stack(
@@ -212,7 +218,8 @@ class Evaluator:
               axis=0))
 
     if self.sample_probability is not None:
-      self.sample_probability.append(read_probs(item_name=item_name))
+      self.sample_probability.append(
+          self.eval_io.read_probs(item_name=item_name))
 
     gt_modes_list = self.data_io.get_all_ground_truth_modes(item_index)
     gt_modes = np.stack(gt_modes_list, axis=0)
