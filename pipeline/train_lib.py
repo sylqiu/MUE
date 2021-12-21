@@ -110,17 +110,12 @@ def train(batch_size: int,
   has_cuda = True if torch.cuda.is_available() else False
   device = torch.device("cuda" if has_cuda else "cpu")
 
-<<<<<<< HEAD
-  dataset = DataLoader(**get_data_loader_param())
-  model = ConditionalVAE(**get_cvae_param()).to(device)
-  train_loader = torch.utils.data.DataLoader(dataset,
-=======
   data_loader_param = get_data_loader_param()
   dataset_name = data_loader_param["dataset_name"]
   dataset = DataLoader(**data_loader_param)
 
   model_param = get_cvae_param()
-  model_name = model_param.encoder_calss
+  model_name = model_param.encoder_class
 
   if model_name == GAUSSIAN_ENCODER:
     eval_use_random = True
@@ -128,8 +123,7 @@ def train(batch_size: int,
     eval_use_random = False
 
   model = ConditionalVAE(**model_param).to(device)
-  train_loader = DataLoader(dataset,
->>>>>>> cfc0965af63f18d9d9b62ff3d0c7d7ea35a5b642
+  train_loader = torch.utils.data.DataLoader(dataset,
                             batch_size=batch_size,
                             shuffle=True,
                             num_workers=4,

@@ -16,7 +16,7 @@ DECODER_CHANNEL_LIST = [3, 2, 4, 2]
 SKIP_CHANNEL_LIST = [None, 3, 3, None]
 DECODER_OUTPUT_LEVEL_LIST = [1, 1, 1, 1]
 UPSAMPLE_SCALE = 2
-KERNEL_SIZE_LIST = [3, 3]
+
 
 
 class TestModuleLib(unittest.TestCase):
@@ -43,7 +43,7 @@ class TestModuleLib(unittest.TestCase):
         self.assertSequenceEqual(outputs[i + k].shape,
                                  (BATCHSIZE, ENCODER_CHANNEL_LIST[i], h, w))
 
-    def test_unet_decoder(self):
+  def test_unet_decoder(self):
       INPUT = module_lib.UnetEncoder(INPUT_CHANNELS, ENCODER_CHANNEL_LIST,
                                      KERNEL_SIZE_LIST, DOWNSAMPLE_LIST,
                                      ENCODER_OUTPUT_LEVEL_LIST,
@@ -52,7 +52,7 @@ class TestModuleLib(unittest.TestCase):
                           dtype=torch.float32)
       inputs = INPUT(inputs)
       inputs = [inputs[0], inputs[1], inputs[4]]
-      module = module_lib.UnetDecoder(inputs[0].shape[1], DECODER_CHANNEL_LIST,
+      module = module_lib.UnetDecoder(INPUT.get_output_channels(), DECODER_CHANNEL_LIST,
                                       KERNEL_SIZE_LIST, SKIP_CHANNEL_LIST,
                                       DECODER_OUTPUT_LEVEL_LIST,
                                       NORMALIZATION_CONFIG)
