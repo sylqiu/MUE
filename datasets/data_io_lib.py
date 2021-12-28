@@ -6,6 +6,7 @@ import torch
 from PIL.Image import open as imread
 from PIL.Image import Image
 import numpy as np
+import gin
 
 IMAGE_KEY = "image"
 GROUND_TRUTH_KEY = "ground_truth"
@@ -40,7 +41,7 @@ def get_data_io_by_name(dataset_name: str) -> DataIO:
   else:
     raise NotImplementedError
 
-
+@gin.configurable
 class LIDC_IDRI(DataIO):
 
   def __init__(self, data_path_root: str, split: str):

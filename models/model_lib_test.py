@@ -2,12 +2,13 @@ import unittest
 import torch
 import gin
 
-from . import model_lib
+from . import model_lib, module_lib
 from pipeline import configure_param
 
 gin.parse_config_file('pipeline/configs/common.gin')
 gin.parse_config_file('pipeline/configs/discrete.gin')
 gin.parse_config_file('pipeline/configs/gaussian.gin')
+
 
 BATCHSIZE = 2
 HEIGHT = 256
@@ -63,8 +64,6 @@ class TestModelLib(unittest.TestCase):
     UNET_PARAM = PARAM["unet_encoder_param"]
     KERNEL_SIZE_LIST = UNET_PARAM["kernel_size_list"]
     ENCODER_CHANNEL_LIST = UNET_PARAM["channels_list"]
-    DOWNSAMPLE_LIST = UNET_PARAM["downsample_list"]
-    OUTPUT_LEVEL_LIST = UNET_PARAM["output_level_list"]
     layer = model_lib.GaussianEncoder(**PARAM)
     outputs = layer(inputs)
     outputs = outputs[::-1]
@@ -104,7 +103,6 @@ class TestModelLib(unittest.TestCase):
     UNET_PARAM = PARAM["unet_encoder_param"]
     KERNEL_SIZE_LIST = UNET_PARAM["kernel_size_list"]
     ENCODER_CHANNEL_LIST = UNET_PARAM["channels_list"]
-    OUTPUT_LEVEL_LIST = UNET_PARAM["output_level_list"]
     outputs = outputs[::-1]
     k = 0
     h = HEIGHT
@@ -116,28 +114,41 @@ class TestModelLib(unittest.TestCase):
       h = h // 2
       w = w // 2
 
-  def test_conditional_vae(self):
-    inputs = torch.ones((BATCHSIZE, 1, HEIGHT, WIDTH), dtype=torch.float32)
-    labels = torch.ones((BATCHSIZE, 1, HEIGHT, WIDTH), dtype=torch.float32)
-    PARAM = configure_param.get_cvae_param()
-    layer = model_lib.ConditionalVAE(**PARAM)
-    outputs = layer(inputs, labels)
-    self.assertSequenceEqual(outputs.shape, (BATCHSIZE, 1, HEIGHT, WIDTH))
-
-    infer = layer.inference(inputs)
-    self.assertSequenceEqual(infer[0][0].shape, (BATCHSIZE, 1, HEIGHT, WIDTH))
-
+  def test_conditional_vae_gaussian(self):
+    gin.parse_config_file('pipeline/configs/gaussian.gin')
+    inputs = torch.ones((BATCHSIZE, 1, HEIGHT, WIDTH), 
+                    dtype=torch.float32)
     labels = torch.ones((BATCHSIZE, 1, HEIGHT, WIDTH),
                     dtype=torch.float32)                
-    PARAM = configure_param.get_cvae_param()
-    layer = model_lib.ConditionalVAE(**PARAM)
-    outputs = layer(inputs, labels)
-    self.assertSequenceEqual(outputs.shape,
+    PARAM1 = configure_param.get_cvae_param()
+    layer1 = model_lib.ConditionalVAE(**PARAM1)
+    outputs1 = layer1(inputs, labels)
+    self.assertSequenceEqual(outputs1.shape,
                          (BATCHSIZE, 1, HEIGHT, WIDTH))
 
-    infer = layer.inference(inputs)
-    self.assertSequenceEqual(infer[0][0].shape,
+    infer1 = layer1.inference(inputs)
+    self.assertSequenceEqual(infer1[0][0].shape, 
                          (BATCHSIZE, 1, HEIGHT, WIDTH))
+
+  def test_conditional_vae_discrete(self):
+    gin.parse_config_file('pipeline/configs/discrete.gin')
+    inputs = torch.ones((BATCHSIZE, 1, HEIGHT, WIDTH), 
+                    dtype=torch.float32)
+    labels = torch.ones((BATCHSIZE, 1, HEIGHT, WIDTH),
+                    dtype=torch.float32)                
+    PARAM2 = configure_param.get_cvae_param()
+    layer2 = model_lib.ConditionalVAE(**PARAM2)
+    layer2.preprocess(**{'mean': 0, 'std': 1})
+    outputs2 = layer2(inputs, labels)
+    self.assertSequenceEqual(outputs2.shape,
+                         (BATCHSIZE, 1, HEIGHT, WIDTH))
+
+    infer2 = layer2.inference(inputs)
+    self.assertSequenceEqual(infer2[0][0].shape, 
+                         (BATCHSIZE, 1, HEIGHT, WIDTH))
+
+
+
 
 
 

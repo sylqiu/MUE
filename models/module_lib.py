@@ -52,6 +52,7 @@ class UnetEncoder(torch.nn.Module):
       if self._output_level_list[layer_index]:
         return_list.append(output)
 
+
     return return_list[::-1]
   
   def get_input_channels(self):
@@ -93,6 +94,7 @@ class UnetDecoder(torch.nn.Module):
                            **normalization_config))
       input_channels = output_channels
     self._output_channels = output_channels
+
 
   def forward(self, x: Sequence[torch.Tensor]):
     skip_index = 1

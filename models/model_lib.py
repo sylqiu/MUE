@@ -269,6 +269,11 @@ class DiscretePosteriorEncoder(torch.nn.Module):
   def get_latent_code_dimension(self):
     return self._latent_code_dimension
 
+  def get_input_channels(self):
+    return self._encoder.get_input_channels()
+
+
+
 
 class DiscretePriorEncoder(torch.nn.Module):
   """A Encoder that learns a code book."""
@@ -332,7 +337,7 @@ class DiscretePriorEncoder(torch.nn.Module):
       # (num_sample, batch_size)
       sample_probabilities = torch.gather(classification_probabilities,
                                           dim=2,
-                                          index=indices).squeeze(dim=2)
+                                          index=indices.unsqueeze(0)).squeeze(dim=2)
       return samples, sample_probabilities
     else:
       return self.sample_top_k(k=1)
@@ -385,8 +390,8 @@ class ConditionalVAE(torch.nn.Module):
         feature_channels=self._posterior_encoder.get_input_channels())
     self._latent_combination_layer = LatentCombinationLayer(
         latent_code_dimension,
-        feature_channels=prior_encoder_param["unet_encoder_param"]
-        ["channels_list"][-3],
+        feature_channels=posterior_encoder_param["unet_encoder_param"]
+            ["channels_list"][-2*latent_code_incorporation_level-1],
         combine_method=combine_method)
 
     self._latent_code_incorporation_level = latent_code_incorporation_level
@@ -455,7 +460,7 @@ class ConditionalVAE(torch.nn.Module):
     """Returns the predictions and their probabilities."""
     if (self._encoder_class == "Discrete" and
         self._prior_encoder._code_book is None):
-      self._prior_encoder.get_code_book(self._posterior_encoder.code_book.embed)
+      self._prior_encoder.get_code_book(self._posterior_encoder._code_book.embed)
 
     prior_features_list = self._prior_encoder(inputs)
     latent_combination_feature = prior_features_list[
