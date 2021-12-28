@@ -1,15 +1,15 @@
 import unittest
-from pipeline.configure_param import get_data_loader_param
-from .data_loader_lib import DataLoader
+from pipeline.configure_param import get_dataset_param
+from .dataset_lib import Dataset
 from .data_io_lib import IMAGE_KEY, GROUND_TRUTH_KEY, MODE_ID_KEY, ITEM_NAME_KEY
 import torch
 
 
 
-class TestDataLoaderLib(unittest.TestCase):
+class TestDatasetLib(unittest.TestCase):
     def test_data_loader(self):
 
-      dataset = DataLoader(**get_data_loader_param("LIDC_IDRI", None, None, None, False, True, True))
+      dataset = Dataset(**get_dataset_param("LIDC_IDRI", None, None, None, False, True, True))
       "Remind implement the return LIDC's init of get_data_io_by_name in data_io_lib"
 
       train_loader = torch.utils.data.DataLoader(dataset,

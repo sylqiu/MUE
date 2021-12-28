@@ -94,7 +94,7 @@ def random_rotate(
   }
 
 
-class DataLoader(torch.utils.data.Dataset):
+class Dataset(torch.utils.data.Dataset):
 
   def __init__(self, dataset_name: str, random_crop_size: Optional[Tuple[int,
                                                                          int]],

@@ -5,8 +5,8 @@ from typing import Callable, Dict, Optional, Sequence, Tuple
 import gin.torch
 import torch
 import numpy as np
-from .configure_param import get_cvae_param, get_data_loader_param
-from datasets.data_loader_lib import DataLoader
+from .configure_param import get_cvae_param, get_dataset_param
+from datasets.dataset_lib import Dataset
 from datasets.data_io_lib import IMAGE_KEY, ITEM_NAME_KEY, DataIO, get_data_io_by_name
 from models.model_lib import ConditionalVAE, DISCRETE_ENCODER, GAUSSIAN_ENCODER
 from .generalized_energy_distance_lib import get_energy_distance_components, calc_energy_distances
@@ -111,9 +111,9 @@ def eval(model: Optional[ConditionalVAE], check_point_path: Optional[str],
   device = torch.device("cuda" if has_cuda else "cpu")
   Tensor = torch.cuda.FloatTensor if device == "cuda" else torch.FloatTensor
 
-  data_loader_param = get_data_loader_param()
+  data_loader_param = get_dataset_param()
   dataset_name = data_loader_param["dataset_name"]
-  dataset = DataLoader(**data_loader_param)
+  dataset = Dataset(**data_loader_param)
 
   model_param = get_cvae_param()
   model_name = model_param.encoder_calss

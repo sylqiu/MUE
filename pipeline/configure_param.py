@@ -170,7 +170,7 @@ def get_cvae_param(
 
 
 @gin.configurable
-def get_data_loader_param(
+def get_dataset_param(
     dataset_name: str, random_crop_size: Optional[Tuple[int, int]],
     random_height_width_ratio_range: Optional[Tuple[float, float]],
     random_rotate_angle_range: Optional[Tuple[float, float]],
