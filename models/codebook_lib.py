@@ -71,6 +71,8 @@ class QuantizeEMA(nn.Module):
     embed_ind = embed_ind.view(*inputs.shape[:-1])
     quantized = self.embed_code(embed_ind)
 
+
+
     if training:
       self.cluster_size.data.mul_(self.decay).add_(
           embed_onehot.sum(0).mul_(1 - self.decay))
@@ -82,8 +84,10 @@ class QuantizeEMA(nn.Module):
       embed_normalized = self.embed_avg / cluster_size.unsqueeze(0)
       self.embed.data.copy_(embed_normalized)
 
+
     diff = quantized.detach() - inputs
     quantized = inputs + (quantized - inputs).detach()
     quantized = quantized.permute(0, 3, 1, 2)
     diff = diff.permute(0, 3, 1, 2)
     return quantized, diff, embed_ind
+

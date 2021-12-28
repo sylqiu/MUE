@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 import math
 import torch
 
@@ -71,7 +71,7 @@ def combine_fedility_losses(fidelity_loss_config_dict: Dict[str, float]):
     loss = 0.0
     for name in fidelity_loss_config_dict:
       if name in loss_mapping:
-        loss += loss_mapping[name](prediction, ground_truth,
+        loss = loss + loss_mapping[name](prediction, ground_truth,
                                    mask) * fidelity_loss_config_dict[name]
       else:
         raise NotImplementedError("%s is not defined in loss_lib!" % name)
@@ -85,15 +85,15 @@ def combine_loss(loss_dict: Dict[str, torch.Tensor],
                  loss_weight_config: Dict[str, float]) -> torch.Tensor:
   loss = 0.0
   for key in loss_dict:
-    loss_dict += loss_dict[key] * loss_weight_config[key]
-
+    loss = loss + loss_dict[key] * loss_weight_config[key]
+  
   return loss
 
 
 def get_current_loss_config(
     current_epoch: int,
-    loss_weight_config_list: Sequence[Tuple[int, Dict[str, float]]]):
+    loss_weight_config_list: Sequence[List[Union[int, Dict[str, float]]]]):
   loss_weight_config_list[-1][0] = math.inf
   current_config_index = min(loss_weight_config_list,
                              key=lambda x: x[0] < current_epoch)
-  return loss_weight_config_list[current_config_index][1]
+  return current_config_index[1]

@@ -9,7 +9,7 @@ from .configure_param import get_cvae_param, get_data_loader_param
 from datasets.data_loader_lib import DataLoader
 from datasets.data_io_lib import IMAGE_KEY, ITEM_NAME_KEY, DataIO, get_data_io_by_name
 from models.model_lib import ConditionalVAE, DISCRETE_ENCODER, GAUSSIAN_ENCODER
-from generalized_energy_distance_lib import get_energy_distance_components, calc_energy_distances
+from .generalized_energy_distance_lib import get_energy_distance_components, calc_energy_distances
 
 
 def argmax_post_processing(predictions: Sequence[torch.Tensor]) -> np.ndarray:
@@ -123,7 +123,7 @@ def eval(model: Optional[ConditionalVAE], check_point_path: Optional[str],
     checkpoint = torch.load(check_point_path, map_location="cpu")
     model.load_state_dict(checkpoint)
 
-  test_loader = DataLoader(dataset,
+  test_loader = torch.utils.data.DataLoader(dataset,
                            batch_size=1,
                            shuffle=False,
                            num_workers=4,

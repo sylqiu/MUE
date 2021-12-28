@@ -34,8 +34,8 @@ class AverageMeter(object):
     self._count += 1
     for key in val:
       self._sum[key] = self._sum.get(key, 0) + val[key]
-      self._avg[key] = self._sum[key] / self.count
-      self._moving_avg = self._moving_avg.get(
+      self._avg[key] = self._sum[key] / self._count
+      self._moving_avg[key] = self._moving_avg.get(
           key, val[key]) * self._moving_avg_multiplier + (
               1.0 - self._moving_avg_multiplier) * val[key]
 

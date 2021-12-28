@@ -6,7 +6,7 @@ from torch.autograd import Variable
 
 def get_activation_layer(activation: str):
   if activation == "relu":
-    return torch.nn.ReLU(inplace=True)
+    return torch.nn.ReLU(inplace=False)
   else:
     raise NotImplementedError
 
@@ -142,6 +142,6 @@ class ResidualBlock(torch.nn.Module):
       if norm is not None:
         res = norm(res)
 
-      outputs += res
+      outputs = outputs + res
 
     return outputs

@@ -3,12 +3,12 @@ import torch
 from . import codebook_lib
 
 
-dim = 4
-n_embed = 10
-BATCHSIZE = 2
-HEIGHT = 11
-WIDTH = 15
-INPUT_CHANNELS = 4
+dim = 128
+n_embed = 512
+BATCHSIZE = 16
+HEIGHT = 1
+WIDTH = 1
+INPUT_CHANNELS = 128
 
 class TestCodebookLib(unittest.TestCase):
     def test_quantizeema(self):

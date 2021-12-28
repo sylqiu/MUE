@@ -10,10 +10,10 @@ from datasets.data_io_lib import IMAGE_KEY, GROUND_TRUTH_KEY, MASK_KEY
 from models.model_lib import ConditionalVAE, DISCRETE_ENCODER, GAUSSIAN_ENCODER
 from utils.plotting_lib import AverageMeter, log_scalar_dict
 from utils.loss_lib import combine_fedility_losses, combine_loss, get_current_loss_config
-from eval_lib import eval
+from .eval_lib import eval
 
 
-def train_epoch(model: ConditionalVAE, data_loader: torch.utils.data.dataLoader,
+def train_epoch(model: ConditionalVAE, data_loader: torch.utils.data.DataLoader,
                 fidelity_loss_fn: Callable[
                     [torch.Tensor, torch.Tensor, Optional[torch.Tensor]],
                     torch.Tensor], loss_weight_config: Dict[str, float],
@@ -54,7 +54,7 @@ def train_epoch(model: ConditionalVAE, data_loader: torch.utils.data.dataLoader,
 
 
 def adaptive_code_book_initialization(model: ConditionalVAE,
-                                      data_loader: torch.utils.data.dataLoader,
+                                      data_loader: torch.utils.data.DataLoader,
                                       device: torch.device):
   Tensor = torch.cuda.FloatTensor if device == "cuda" else torch.FloatTensor
   code_stat = AverageMeter()
@@ -69,10 +69,10 @@ def adaptive_code_book_initialization(model: ConditionalVAE,
         "mean": code.mean(dim=0, keepdim=True)
     })
 
-  initial_std = code_stat.get_average_dict()["variance"].pow(0.5)
-  initial_mean = code_stat.get_average_dict()["mean"]
+  initial_std = code_stat.get_average_dict()["variance"].pow(0.5).squeeze(3).squeeze(2)
+  initial_mean = code_stat.get_average_dict()["mean"].squeeze(3).squeeze(2)
 
-  model.preprocess(mean=initial_mean, std=initial_std)
+  model.preprocess(mean=initial_mean.transpose(0,1), std=initial_std.transpose(0,1))
 
 
 @gin.configurable
@@ -115,7 +115,7 @@ def train(batch_size: int,
   dataset = DataLoader(**data_loader_param)
 
   model_param = get_cvae_param()
-  model_name = model_param.encoder_class
+  model_name = model_param["encoder_class"]
 
   if model_name == GAUSSIAN_ENCODER:
     eval_use_random = True
@@ -137,11 +137,13 @@ def train(batch_size: int,
 
   # perform adaptive code book initialization for discrete posterior encoder
   if model.get_encoder_class() == DISCRETE_ENCODER:
+    model.preprocess(**{'mean': 0, 'std': 1})
     adaptive_code_book_initialization(model, train_loader, device)
+
 
   milestone_index = 0
   for epoch_index in range(num_epochs):
-    loss_weight_dict = get_current_loss_config(loss_weight_config_list)
+    loss_weight_dict = get_current_loss_config(epoch_index, loss_weight_config_list)
     if epoch_index + 1 in learning_rate_milestones:
       logging.info("Using learning rate %f" %
                    (learning_rate_milestones[milestone_index]))
@@ -157,6 +159,7 @@ def train(batch_size: int,
                 optimizer=optimizer,
                 average_meter=average_meter,
                 device=device)
+    print('gone')
 
     if (epoch_index + 1) % eval_epoch_interval == 0 or (epoch_index +
                                                         1) == num_epochs:
