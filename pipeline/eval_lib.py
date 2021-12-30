@@ -23,20 +23,20 @@ def argmax_post_processing(predictions: Sequence[torch.Tensor]) -> np.ndarray:
     (num_sample, B, C, H, W)
   """
   predictions = torch.stack(predictions, dim=0)
-  return predictions.argmax(dim=2).cpu().numpy()
+  return predictions.argmax(dim=2).detach().cpu().numpy()
 
 
 def sigmoid_post_processing(predictions: Sequence[torch.Tensor],
                             threshold: float = 0.5) -> np.ndarray:
-  predictions = torch.nn.functional.sigmoid(torch.stack(predictions, dim=0))
+  predictions = torch.sigmoid(torch.stack(predictions, dim=0))
   predictions = predictions > threshold
-  return predictions.cpu().numpy()
+  return predictions.detach().cpu().numpy()
 
 
 def probabilities_post_processing(
     probabilities: Sequence[torch.Tensor]) -> np.ndarray:
   """Stacking the sample probabilities along the first dimension."""
-  return torch.stack(probabilities, dim=0)
+  return (torch.stack(probabilities, dim=0)).detach().cpu().numpy()
 
 
 def density_post_processing(densities: Sequence[torch.Tensor],
@@ -46,7 +46,7 @@ def density_post_processing(densities: Sequence[torch.Tensor],
   Apply a scaling because the individual densities might be too small. Rarely
   should density be used anyway.
   """
-  return torch.stack(densities, dim=0) * scaling
+  return (torch.stack(densities, dim=0) * scaling).detach().cpu().numpy()
 
 
 def get_final_processing_layer(
@@ -69,8 +69,12 @@ def get_samples_save_path(base_save_path: str, epoch_index: Optional[int],
   dataset_model_token = "%s_%s" % (dataset_name, model_name)
   eval_foldername = "eval_%d_epoch" % (
       epoch_index) if epoch_index is not None else "eval"
-  return os.path.join(base_save_path, eval_foldername, dataset_model_token,
-                      "images", "%s_%dsamples.npy" % (item_name, num_sample))
+  save_dir = os.path.join(base_save_path, eval_foldername, dataset_model_token,
+               "images")
+  if not os.path.isdir(save_dir):
+          os.makedirs(save_dir)
+
+  return os.path.join(save_dir, "%s_%dsamples.npy" % (item_name, num_sample))
 
 
 def get_probs_save_path(base_save_path: str, epoch_index: Optional[int],
@@ -79,8 +83,13 @@ def get_probs_save_path(base_save_path: str, epoch_index: Optional[int],
   dataset_model_token = "%s_%s" % (dataset_name, model_name)
   eval_foldername = "eval_%d_epoch" % (
       epoch_index) if epoch_index is not None else "eval"
-  os.path.join(base_save_path, eval_foldername, dataset_model_token,
-               "quantities", "%s_%dprobs.npy" % (item_name, num_sample))
+  save_dir = os.path.join(base_save_path, eval_foldername, dataset_model_token,
+               "quantities")
+  if not os.path.isdir(save_dir):
+          os.makedirs(save_dir)
+
+  return os.path.join(save_dir, "%s_%dprobs.npy" % (item_name, num_sample))
+
 
 
 def save_results(base_save_path: str, epoch_index: Optional[int],
@@ -116,7 +125,7 @@ def eval(model: Optional[ConditionalVAE], check_point_path: Optional[str],
   dataset = Dataset(**data_loader_param)
 
   model_param = get_cvae_param()
-  model_name = model_param.encoder_calss
+  model_name = model_param["encoder_class"]
 
   if model is None:
     model = ConditionalVAE(**model_param).to(device)
@@ -137,6 +146,7 @@ def eval(model: Optional[ConditionalVAE], check_point_path: Optional[str],
                                                  use_random=use_random,
                                                  top_k=top_k,
                                                  num_sample=num_sample)
+    
     save_results(base_save_path=base_save_path,
                  epoch_index=epoch_index,
                  model_name=model_name,
@@ -250,3 +260,5 @@ class Evaluator:
 
     return calc_energy_distances(self.d_matrices, sample_probability,
                                  gt_probability)
+
+

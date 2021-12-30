@@ -350,11 +350,11 @@ class DiscretePriorEncoder(torch.nn.Module):
                                                 dim=1)
     samples = torch.nn.functional.embedding(top_indices,
                                             self._code_book.transpose(0, 1))
-
+  
     # top_probabilities should be of shape (k, B)
     top_probabilities = top_probabilities.transpose(0, 1)
     # samples should be of shape (k, B, latent_code_dimension)
-    samples = samples.permute((2, 0, 1))
+    samples = samples.permute((1, 0, 2))
     return samples, top_probabilities
 
   def get_latent_code_dimension(self):
@@ -433,7 +433,7 @@ class ConditionalVAE(torch.nn.Module):
   def prior_sample_top_k(self, top_k: int) -> Tuple[torch.Tensor, torch.Tensor]:
     """Sample the top k latent codes from the prior, organized in the first
     dimension."""
-    return self._prior_encdoer.sample_top_k(top_k)
+    return self._prior_encoder.sample_top_k(top_k)
 
   def compute_kl_divergence(self):
     if self._encoder_class == GAUSSIAN_ENCODER:
@@ -475,7 +475,7 @@ class ConditionalVAE(torch.nn.Module):
     else:
       latent_codes, probabilities = self.prior_sample(use_random=use_random,
                                                       num_sample=num_sample)
-
+  
     predictions = []
     # each prediction of shape (B, C, H, W)
     for sample_index in range(latent_codes.shape[0]):

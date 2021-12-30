@@ -75,6 +75,7 @@ def adaptive_code_book_initialization(model: ConditionalVAE,
   model.preprocess(mean=initial_mean.transpose(0,1), std=initial_std.transpose(0,1))
 
 
+
 @gin.configurable
 def train(batch_size: int,
           num_epochs: int,
@@ -159,14 +160,19 @@ def train(batch_size: int,
                 optimizer=optimizer,
                 average_meter=average_meter,
                 device=device)
-    print('gone')
+    
+    if not os.path.isdir(os.path.join(base_save_path, "train", dataset_model_token)):
+      os.makedirs(os.path.join(base_save_path, "train", dataset_model_token))
 
     if (epoch_index + 1) % eval_epoch_interval == 0 or (epoch_index +
                                                         1) == num_epochs:
+
       torch.save(
           model.state_dict(),
           os.path.join(base_save_path, "train", dataset_model_token,
-                       "epoch_%d.pth"))
+                       "epoch_%d.pth" %(epoch_index)))
+      logging.info("saving epoch%d for %s model, %s" %
+               (epoch_index, model_name, dataset_name))
       eval(model,
            check_point_path=None,
            use_random=eval_use_random,
