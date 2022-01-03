@@ -96,13 +96,13 @@ def random_rotate(
 
 class Dataset(torch.utils.data.Dataset):
 
-  def __init__(self, dataset_name: str, data_path_root: str, split: str,
+  def __init__(self, dataset_name: str,
                random_crop_size: Optional[Tuple[int,int]],
                random_height_width_ratio_range: Optional[Tuple[float, float]],
                random_rotate_angle_range: Optional[Tuple[float, float]],
                use_random_flip: bool, is_training: bool,
                has_ground_truth: bool):
-    self._data_io_class = get_data_io_by_name(dataset_name, data_path_root, split)
+    self._data_io_class = get_data_io_by_name(dataset_name)
     self._random_crop_size = random_crop_size
     self._random_rotate_angle_range = random_rotate_angle_range
     self._use_random_flip = use_random_flip
