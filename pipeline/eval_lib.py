@@ -124,11 +124,11 @@ def eval(model: Optional[ConditionalVAE], check_point_path: Optional[str],
     model.load_state_dict(checkpoint)
 
   test_loader = torch.utils.data.DataLoader(dataset,
-                           batch_size=1,
-                           shuffle=False,
-                           num_workers=4,
-                           pin_memory=True,
-                           sampler=None)
+                                            batch_size=1,
+                                            shuffle=False,
+                                            num_workers=4,
+                                            pin_memory=True,
+                                            sampler=None)
 
   for _, batch in enumerate(test_loader):
     item_name = batch[ITEM_NAME_KEY][0]
@@ -205,7 +205,7 @@ class Evaluator:
                            len(eval_class_ids)),
                     dtype=np.float32)
     }
-    if self.data_io.get_ground_truth_modes_probabilities(0) is None:
+    if not self.data_io.has_ground_truth_modes_probabilities():
       self.gt_probability = None
     else:
       self.gt_probability = []
@@ -219,15 +219,14 @@ class Evaluator:
     samples = self.eval_io.read_samples(item_name=item_name)
     if self.gt_probability is not None:
       self.gt_probability.append(
-          np.stack(
-              self.data_io.get_ground_truth_modes_probabilities(item_index),
-              axis=0))
+          np.stack(self.data_io.get_ground_truth_modes_probabilities(item_name),
+                   axis=0))
 
     if self.sample_probability is not None:
       self.sample_probability.append(
           self.eval_io.read_probs(item_name=item_name))
 
-    gt_modes_list = self.data_io.get_all_ground_truth_modes(item_index)
+    gt_modes_list = self.data_io.get_all_ground_truth_modes(item_name)
     gt_modes = np.stack(gt_modes_list, axis=0)
 
     energy_dist = get_energy_distance_components(
