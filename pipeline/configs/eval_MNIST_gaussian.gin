@@ -1,0 +1,10 @@
+  EvalIO.base_save_path = "C:\\Users\\gli\\Documents\\MUE_Eval_Data"
+  EvalIO.dataset_name = "GuessMNIST"
+  EvalIO.model_name = "Gaussian"
+  EvalIO.num_sample = 20
+
+  GeneralizedEnergyDistanceEvaluator.num_cvae_samples = 20
+  GeneralizedEnergyDistanceEvaluator.dataset_name = "GuessMNIST"
+  GeneralizedEnergyDistanceEvaluator.data_path_root = 
+  GeneralizedEnergyDistanceEvaluator.diff_fn = @metric_lib.diff_l1_metric
+  GeneralizedEnergyDistanceEvaluator.use_pred_probability = False

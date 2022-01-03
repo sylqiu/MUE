@@ -27,21 +27,31 @@ class DataIO(ABC):
     pass
 
   @abstractmethod
-  def get_all_ground_truth_modes(self, input_index: int):
+  def get_num_groud_truth_modes(self):
+    pass
+
+  @abstractmethod
+  def get_all_ground_truth_modes(self, item_name: str):
     pass
 
   @abstractmethod
   def has_ground_truth_modes_probabilities(self):
     pass
-  
+
   @abstractmethod
-  def get_ground_truth_modes_probabilities(self, input_index: int):
+  def get_ground_truth_modes_probabilities(self, item_name: str):
     pass
 
 
-def get_data_io_by_name(dataset_name: str, data_path_root: str, split: str) -> DataIO:
+
+
+def get_data_io_by_name(dataset_name: str, data_path_root: str,
+                        split: str) -> DataIO:
   if dataset_name == "LIDC_IDRI":
     return LIDC_IDRI(data_path_root, split)
+  if dataset_name == "GuessMNIST":
+    return GuessMNIST(data_path_root, split)
+
   else:
     raise NotImplementedError
 
@@ -58,6 +68,9 @@ class LIDC_IDRI(DataIO):
 
   def _get_ground_truth_name_format(self, item_name: str) -> str:
     return os.path.join(self.data_path_root, "gt", item_name + "_l%d.png")
+
+  def get_num_groud_truth_modes(self) -> int:
+    return 4
 
   def get_data(self, input_index: int,
                output_selection_index: int) -> Dict[str, Union[Image, str]]:
@@ -82,12 +95,13 @@ class LIDC_IDRI(DataIO):
       modes_list.append(imread(ground_truth_name_format % (mode_index)))
 
     return modes_list
-  
+
   def has_ground_truth_modes_probabilities(self):
     return False
 
   def get_ground_truth_modes_probabilities(self, item_name: str):
     return None
+
 
 
 @gin.configurable
@@ -128,7 +142,7 @@ class GuessMNIST(DataIO):
     sample_index = torch.randint(0, len(label_list), (1,)).item()
     return np.array(self.digit_images[label_list[sample_index]]), sample_index
 
-  def _construct_input_output(self, mode_index: int,
+  def _construct_input_output(self, group_index: int,
                               correct_guess_index: int) -> Dict[str, Any]:
     input_image = []
     correct_guess = []
@@ -136,7 +150,7 @@ class GuessMNIST(DataIO):
 
     for i in range(self.modes.shape[-1]):
       sample_image, sample_image_index = self._random_sample_image_from_label(
-          self.modes[mode_index][i])
+          self.modes[group_index][i])
       input_image.append(sample_image)
       input_image_indices.append(sample_image_index)
       if correct_guess_index == i:
@@ -153,32 +167,38 @@ class GuessMNIST(DataIO):
         GROUND_TRUTH_KEY:
             correct_guess,
         ITEM_NAME_KEY:
-            '{}_'.format(mode_index) +
+            '{}_'.format(group_index) +
             ["{}_".format(id) for id in input_image_indices
             ].join("").rstrip("_"),
     }
 
+  def get_num_groud_truth_modes(self) -> int:
+    return self.modes.shape[0] * self.modes.shape[1]
+  
+  def compute_mode_index(self, group_index: int, correct_guess_index: int):
+    return group_index * self.modes.shape[-1] + correct_guess_index
+
   def sample_output_selection_index(self):
-    self.mode_index = np.argmax(self._cumsum_mode_probs > torch.rand(1).itme())
+    self.group_index = np.argmax(self._cumsum_mode_probs > torch.rand(1).itme())
     self.correct_guess_index = np.argmax(
-        self._cumsum_cond_probs[self.mode_index] > torch.rand(1).item())
-    return self.mode_index * 4 + self.correct_guess_index
+        self._cumsum_cond_probs[self.group_index] > torch.rand(1).item())
+    return self.compute_mode_index(self.group_index, self.correct_guess_index)
 
   def get_data(
       self, input_index: int,
       output_selection_index: int) -> Dict[str, Union[np.ndarray, str]]:
     # Because data are randomly sampled and generated on the fly,
     # input_index is not used; output_selection_index should be
-    # self.mode_index * 4 + self.correct_guess_index, which is also not used
+    # self.group_index * 4 + self.correct_guess_index, which is also not used
     # directly.
-    return self._construct_input_output(self.mode_index,
+    return self._construct_input_output(self.group_index,
                                         self.correct_guess_index)
 
   def get_all_ground_truth_modes(self, item_name: str) -> Sequence[np.array]:
     img_key = list(map(int, item_name.split('_')))
-    mode_index = img_key[0]
+    group_index = img_key[0]
     input_image_indices = img_key[1:]
-    input_labels = self.modes[mode_index]
+    input_labels = self.modes[group_index]
     modes_list = []
     j = 0
     for label, input_image_index in zip(input_labels, input_image_indices):
@@ -198,11 +218,11 @@ class GuessMNIST(DataIO):
       modes_list.append(output_image)
 
     return modes_list
-  
+
   def has_ground_truth_modes_probabilities(self):
     return True
 
   def get_ground_truth_modes_probabilities(self, item_name: str):
     img_key = list(map(int, item_name.split('_')))
-    mode_index = img_key[0]
-    return self.conditional_probabilities[mode_index]
+    group_index = int(img_key[0])
+    return self.conditional_probabilities[group_index]

@@ -97,7 +97,7 @@ def random_rotate(
 class Dataset(torch.utils.data.Dataset):
 
   def __init__(self, dataset_name: str, data_path_root: str, split: str,
-               random_crop_size: Optional[Tuple[int,int]],
+               random_crop_size: Optional[Tuple[int, int]],
                random_height_width_ratio_range: Optional[Tuple[float, float]],
                random_rotate_angle_range: Optional[Tuple[float, float]],
                use_random_flip: bool, is_training: bool,
@@ -148,9 +148,11 @@ class Dataset(torch.utils.data.Dataset):
 
     return data_dict
 
-  def get_all_ground_truth_modes(self, item_name: str) -> Sequence[np.ndarray]:
-    modes_list = []
-    for img in self._data_io_class.get_all_ground_truth_modes(item_name):
-      modes_list.append(to_numpy(img))
 
-    return modes_list
+def get_all_ground_truth_modes(data_io, item_name: str) -> Sequence[np.ndarray]:
+  modes_list = []
+  imgs = data_io.get_all_ground_truth_modes(item_name)
+  for img in imgs:
+    modes_list.append(to_numpy(conform_channel_dim(img)))
+
+  return modes_list
