@@ -8,8 +8,8 @@ from .data_io_lib import get_data_io_by_name, IMAGE_KEY, ITEM_NAME_KEY, GROUND_T
 MAX_INT8 = 255.0
 
 
-def to_numpy(pil_image: Any) -> np.ndarray:
-  return np.array(pil_image) / MAX_INT8
+def to_numpy(np_convertible_image_8bit: Any) -> np.ndarray:
+  return np.array(np_convertible_image_8bit) / MAX_INT8
 
 
 def conform_channel_dim(image: np.ndarray):
@@ -117,6 +117,7 @@ class Dataset(torch.utils.data.Dataset):
     if self._is_training:
       mode_id = self._data_io.sample_output_selection_index()
     else:
+      # not important, because the posterior encoder will not be used
       mode_id = 0
 
     data_dict = self._data_io.get_data(input_index, mode_id)
@@ -147,11 +148,9 @@ class Dataset(torch.utils.data.Dataset):
 
     return data_dict
 
-
-  def get_all_ground_truth_modes(self,
-                                 input_index: int) -> Sequence[np.ndarray]:
+  def get_all_ground_truth_modes(self, item_name: str) -> Sequence[np.ndarray]:
     modes_list = []
-    for img in self._data_io_class.get_all_ground_truth_modes(input_index):
+    for img in self._data_io_class.get_all_ground_truth_modes(item_name):
       modes_list.append(to_numpy(img))
 
     return modes_list
