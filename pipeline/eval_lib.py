@@ -78,6 +78,7 @@ def get_samples_save_path(base_save_path: str, epoch_index: Optional[int],
   return os.path.join(save_dir, "%s_%d_samples.npy" % (item_name, num_sample))
 
 
+
 def get_probs_save_path(base_save_path: str, epoch_index: Optional[int],
                         model_name: str, dataset_name: str, item_name: str,
                         num_sample: int):
@@ -90,6 +91,7 @@ def get_probs_save_path(base_save_path: str, epoch_index: Optional[int],
     os.makedirs(save_dir)
 
   return os.path.join(save_dir, "%s_%d_probs.npy" % (item_name, num_sample))
+
 
 
 def save_results(base_save_path: str, epoch_index: Optional[int],
@@ -146,6 +148,7 @@ def eval(model: Optional[ConditionalVAE], check_point_path: Optional[str],
                                                  use_random=use_random,
                                                  top_k=top_k,
                                                  num_sample=num_cvae_sample)
+
 
     save_results(base_save_path=base_save_path,
                  epoch_index=epoch_index,
@@ -267,6 +270,7 @@ class GeneralizedEnergyDistanceEvaluator:
                                  gt_probability)
 
 
+
 @gin.configurable
 class ModeProababilityEvaluator:
 
@@ -327,3 +331,4 @@ class ModeProababilityEvaluator:
     for key in prediction_mode_data:
       self.prediction_mode_data[self.data_io.compute_mode_index(
           group_index, key)].append(prediction_mode_data[key])
+

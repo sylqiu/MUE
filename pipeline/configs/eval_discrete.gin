@@ -1,0 +1,14 @@
+  EvalIO.base_save_path = "C:\\Users\\gli\\Documents\\MUE_Eval_Data"
+  EvalIO.dataset_name = "LIDC_IDRI"
+  EvalIO.model_name = "Discrete"
+  EvalIO.num_sample = 
+
+  Evaluator.num_cvae_samples =
+  Evaluator.num_testing_items =
+  Evaluator.num_gt_modes =
+  Evaluator.eval_class_ids =
+  Evaluator.dataset_name =
+  Evaluator.data_path_root =
+  Evaluator.metric_fn =
+  Evaluator.use_pred_probability =
+
