@@ -111,6 +111,23 @@ def metrics_from_conf_matrix(conf_matrix):
   return metrics
 
 
-def compute_iou_metric(ground_truth, sample, mask, eval_class_ids):
+def compute_iou_metric(ground_truth: np.ndarray, sample: np.ndarray,
+                       mask: Optional[np.ndarray],
+                       eval_class_ids: Union[int, Sequence[int]]):
   conf_matrix = calc_confusion(ground_truth, sample, mask, eval_class_ids)
   return 1.0 - metrics_from_conf_matrix(conf_matrix)['iou']
+
+
+def compute_l1_metric(ground_truth: np.ndarray, sample: np.ndarray,
+                      mask: Optional[np.ndarray],
+                      eval_class_ids: Union[int, Sequence[int]]):
+  return np.sum(compute_l1_diff(ground_truth, sample, mask))
+
+
+def compute_l1_diff(ground_truth: np.ndarray, sample: np.ndarray,
+                    mask: Optional[np.ndarray]):
+  diff = np.abs(ground_truth - sample)
+  if mask is not None:
+    diff = diff * mask
+
+  return diff

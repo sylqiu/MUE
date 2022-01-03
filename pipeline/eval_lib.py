@@ -3,7 +3,7 @@ import collections
 from absl import logging
 from tqdm import tqdm
 from typing import Callable, Dict, Optional, Sequence, Tuple
-import gin.torch
+import gin
 import torch
 import numpy as np
 from .configure_param import get_cvae_param, get_dataset_param
@@ -193,17 +193,19 @@ class EvalIO:
 @gin.configurable
 class GeneralizedEnergyDistanceEvaluator:
 
-  def __init__(self, num_cvae_samples: int, num_testing_items: int,
-               eval_class_ids: Sequence[int], dataset_name: DataIO,
-               data_path_root: str, metric_fn: Callable[..., float],
-               use_pred_probability: bool):
+  def __init__(self, num_cvae_samples: int, eval_class_ids: Sequence[int],
+               dataset_name: DataIO, data_path_root: str,
+               metric_fn: Callable[..., float], use_pred_probability: bool):
 
     self.eval_class_ids = eval_class_ids
     self.num_cvae_samples = num_cvae_samples
     self.eval_io = EvalIO()
     self.data_io = get_data_io_by_name(dataset_name, data_path_root, "test")
-    num_gt_modes = self.data_io.get_num_gt_modes()
     self.metric_fn = metric_fn
+
+    num_testing_items = self.data_io.length
+    num_gt_modes = self.data_io.get_num_gt_modes()
+
     self.d_matrices = {
         'YS':
             np.zeros(shape=(num_testing_items, num_gt_modes, num_cvae_samples,
@@ -265,14 +267,16 @@ class GeneralizedEnergyDistanceEvaluator:
                                  gt_probability)
 
 
-class ModeProababilityEvaluator():
+@gin.configurable
+class ModeProababilityEvaluator:
 
-  def __init__(self, num_cvae_samples: int, num_testing_items: int,
-               dataset_name: str, data_path_root: str,
-               metric_fn: Callable[..., float], use_pred_probability: bool):
+  def __init__(self, num_cvae_samples: int, dataset_name: str,
+               data_path_root: str, diff_fn: Callable[..., float],
+               use_pred_probability: bool):
     self.eval_io = EvalIO()
     self.data_io = get_data_io_by_name(dataset_name, data_path_root, "test")
-    self.metric_fn = metric_fn
+    self.diff_fn = diff_fn
+    self.num_cvae_samples = num_cvae_samples
 
     # Because we don't support batch loading gt modes, the batch_size should be
     # 1 for the test data.
@@ -313,7 +317,7 @@ class ModeProababilityEvaluator():
       # should be of shape [1, 1, C, H, W]
       sample = samples[sample_index:sample_index + 1]
       prob = sample_probabilities[sample_index:sample_index + 1]
-      diff = np.sum(self.metric_fn(sample, ground_truth_modes),
+      diff = np.sum(self.diff_fn(sample, ground_truth_modes, None),
                     axis=[1, 2, 3, 4])
       correct_guess_index = np.argmin(diff)
 

@@ -48,6 +48,8 @@ def get_data_io_by_name(dataset_name: str, data_path_root: str,
                         split: str) -> DataIO:
   if dataset_name == "LIDC_IDRI":
     return LIDC_IDRI(data_path_root, split)
+  if dataset_name == "GuessMNIST":
+    return GuessMNIST(data_path_root, split)
   else:
     raise NotImplementedError
 
