@@ -35,9 +35,9 @@ class DataIO(ABC):
     pass
 
 
-def get_data_io_by_name(dataset_name: str, data_path_root: str, split: str) -> DataIO:
+def get_data_io_by_name(dataset_name: str) -> type[DataIO]:
   if dataset_name == "LIDC_IDRI":
-    return LIDC_IDRI(data_path_root, split)
+    return LIDC_IDRI
   else:
     raise NotImplementedError
 
