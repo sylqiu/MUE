@@ -102,7 +102,7 @@ class Dataset(torch.utils.data.Dataset):
                random_rotate_angle_range: Optional[Tuple[float, float]],
                use_random_flip: bool, is_training: bool,
                has_ground_truth: bool):
-    self._data_io_class = get_data_io_by_name(dataset_name)
+    self._data_io = get_data_io_by_name(dataset_name)()
     self._random_crop_size = random_crop_size
     self._random_rotate_angle_range = random_rotate_angle_range
     self._use_random_flip = use_random_flip
@@ -111,15 +111,15 @@ class Dataset(torch.utils.data.Dataset):
     self._has_ground_truth = has_ground_truth
 
   def __len__(self):
-    return self._data_io_class.length
+    return self._data_io.length
 
   def __getitem__(self, input_index: int):
     if self._is_training:
-      mode_id = self._data_io_class.sample_output_selection_index()
+      mode_id = self._data_io.sample_output_selection_index()
     else:
       mode_id = 0
 
-    data_dict = self._data_io_class.get_data(input_index, mode_id)
+    data_dict = self._data_io.get_data(input_index, mode_id)
     item_name = data_dict[ITEM_NAME_KEY]
     image_dict = {
         IMAGE_KEY: data_dict[IMAGE_KEY],
