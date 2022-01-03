@@ -120,9 +120,9 @@ def eval(model: Optional[ConditionalVAE], check_point_path: Optional[str],
   device = torch.device("cuda" if has_cuda else "cpu")
   Tensor = torch.cuda.FloatTensor if device == "cuda" else torch.FloatTensor
 
-  data_loader_param = get_dataset_param()
-  dataset_name = data_loader_param["dataset_name"]
-  dataset = Dataset(**data_loader_param)
+  dataset_param = get_dataset_param()
+  dataset_name = dataset_param["dataset_name"]
+  dataset = Dataset(**dataset_param)
 
   model_param = get_cvae_param()
   model_name = model_param["encoder_class"]
@@ -199,7 +199,7 @@ class Evaluator:
 
     self.eval_class_ids = eval_class_ids
     self.eval_io = EvalIO()
-    self.data_io = get_data_io_by_name(dataset_name)(data_path_root, "test")
+    self.data_io = get_data_io_by_name(dataset_name, data_path_root, "test")
     self.metric_fn = metric_fn
     self.d_matrices = {
         'YS':

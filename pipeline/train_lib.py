@@ -5,7 +5,7 @@ import gin.torch
 import torch
 from .configure_param import get_cvae_param, get_dataset_param
 from datasets.dataset_lib import Dataset
-from datasets.data_io_lib import MASK_KEY, get_data_io_by_name
+from datasets.data_io_lib import MASK_KEY
 from datasets.data_io_lib import IMAGE_KEY, GROUND_TRUTH_KEY, MASK_KEY
 from models.model_lib import ConditionalVAE, DISCRETE_ENCODER, GAUSSIAN_ENCODER
 from utils.plotting_lib import AverageMeter, log_scalar_dict
@@ -111,9 +111,9 @@ def train(batch_size: int,
   has_cuda = True if torch.cuda.is_available() else False
   device = torch.device("cuda" if has_cuda else "cpu")
 
-  data_loader_param = get_dataset_param()
-  dataset_name = data_loader_param["dataset_name"]
-  dataset = Dataset(**data_loader_param)
+  dataset_param = get_dataset_param()
+  dataset_name = dataset_param["dataset_name"]
+  dataset = Dataset(**dataset_param)
 
   model_param = get_cvae_param()
   model_name = model_param["encoder_class"]

@@ -171,12 +171,15 @@ def get_cvae_param(
 
 @gin.configurable
 def get_dataset_param(
-    dataset_name: str, random_crop_size: Optional[Tuple[int, int]],
+    dataset_name: str, data_path_root: str, split: str,
+    random_crop_size: Optional[Tuple[int, int]],
     random_height_width_ratio_range: Optional[Tuple[float, float]],
     random_rotate_angle_range: Optional[Tuple[float, float]],
     use_random_flip: bool, is_training: bool, has_ground_truth: bool):
   return {
       "dataset_name": dataset_name,
+      "data_path_root": data_path_root,
+      "split": split,
       "random_crop_size": random_crop_size,
       "random_height_width_ratio_range": random_height_width_ratio_range,
       "random_rotate_angle_range": random_rotate_angle_range,
