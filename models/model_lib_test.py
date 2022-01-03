@@ -10,7 +10,7 @@ gin.parse_config_file('pipeline/configs/discrete.gin')
 gin.parse_config_file('pipeline/configs/gaussian.gin')
 
 
-BATCHSIZE = 2
+BATCHSIZE = 4
 HEIGHT = 256
 WIDTH = 256
 INPUT_CHANNELS = 3

@@ -12,8 +12,9 @@ train.initial_learning_rate = 0.001
 train.learning_rate_milestones = {32: 0.0001}
 
 
-
 get_dataset_param.dataset_name = "LIDC_IDRI"
+get_dataset_param.data_path_root = "YOUR_PATH"
+get_dataset_param.split = "train"
 get_dataset_param.random_crop_size = None
 get_dataset_param.random_height_width_ratio_range = None
 get_dataset_param.random_rotate_angle_range = None
@@ -21,5 +22,4 @@ get_dataset_param.use_random_flip = False
 get_dataset_param.is_training = True
 get_dataset_param.has_ground_truth = True
 
-LIDC_IDRI.data_path_root = "YOUR_PATH"
-LIDC_IDRI.split = "train"
+

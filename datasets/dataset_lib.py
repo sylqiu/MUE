@@ -96,13 +96,13 @@ def random_rotate(
 
 class Dataset(torch.utils.data.Dataset):
 
-  def __init__(self, dataset_name: str, random_crop_size: Optional[Tuple[int,
-                                                                         int]],
+  def __init__(self, dataset_name: str, data_path_root: str, split: str,
+               random_crop_size: Optional[Tuple[int,int]],
                random_height_width_ratio_range: Optional[Tuple[float, float]],
                random_rotate_angle_range: Optional[Tuple[float, float]],
                use_random_flip: bool, is_training: bool,
                has_ground_truth: bool):
-    self._data_io_class = get_data_io_by_name(dataset_name)
+    self._data_io = get_data_io_by_name(dataset_name, data_path_root, split)
     self._random_crop_size = random_crop_size
     self._random_rotate_angle_range = random_rotate_angle_range
     self._use_random_flip = use_random_flip
@@ -111,16 +111,16 @@ class Dataset(torch.utils.data.Dataset):
     self._has_ground_truth = has_ground_truth
 
   def __len__(self):
-    return self._data_io_class.length
+    return self._data_io.length
 
   def __getitem__(self, input_index: int):
     if self._is_training:
-      mode_id = self._data_io_class.sample_output_selection_index()
+      mode_id = self._data_io.sample_output_selection_index()
     else:
       # not important, because the posterior encoder will not be used
       mode_id = 0
 
-    data_dict = self._data_io_class.get_data(input_index, mode_id)
+    data_dict = self._data_io.get_data(input_index, mode_id)
     item_name = data_dict[ITEM_NAME_KEY]
     image_dict = {
         IMAGE_KEY: data_dict[IMAGE_KEY],

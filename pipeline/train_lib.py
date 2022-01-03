@@ -5,7 +5,7 @@ import gin.torch
 import torch
 from .configure_param import get_cvae_param, get_dataset_param
 from datasets.dataset_lib import Dataset
-from datasets.data_io_lib import MASK_KEY, get_data_io_by_name
+from datasets.data_io_lib import MASK_KEY
 from datasets.data_io_lib import IMAGE_KEY, GROUND_TRUTH_KEY, MASK_KEY
 from models.model_lib import ConditionalVAE, DISCRETE_ENCODER, GAUSSIAN_ENCODER
 from utils.plotting_lib import AverageMeter, log_scalar_dict
@@ -75,6 +75,7 @@ def adaptive_code_book_initialization(model: ConditionalVAE,
   model.preprocess(mean=initial_mean.transpose(0,1), std=initial_std.transpose(0,1))
 
 
+
 @gin.configurable
 def train(batch_size: int,
           num_epochs: int,
@@ -110,9 +111,9 @@ def train(batch_size: int,
   has_cuda = True if torch.cuda.is_available() else False
   device = torch.device("cuda" if has_cuda else "cpu")
 
-  data_loader_param = get_dataset_param()
-  dataset_name = data_loader_param["dataset_name"]
-  dataset = Dataset(**data_loader_param)
+  dataset_param = get_dataset_param()
+  dataset_name = dataset_param["dataset_name"]
+  dataset = Dataset(**dataset_param)
 
   model_param = get_cvae_param()
   model_name = model_param["encoder_class"]
@@ -159,14 +160,19 @@ def train(batch_size: int,
                 optimizer=optimizer,
                 average_meter=average_meter,
                 device=device)
-    print('gone')
+    
+    if not os.path.isdir(os.path.join(base_save_path, "train", dataset_model_token)):
+      os.makedirs(os.path.join(base_save_path, "train", dataset_model_token))
 
     if (epoch_index + 1) % eval_epoch_interval == 0 or (epoch_index +
                                                         1) == num_epochs:
+
       torch.save(
           model.state_dict(),
           os.path.join(base_save_path, "train", dataset_model_token,
-                       "epoch_%d.pth"))
+                       "epoch_%d.pth" %(epoch_index)))
+      logging.info("saving epoch%d for %s model, %s" %
+               (epoch_index, model_name, dataset_name))
       eval(model,
            check_point_path=None,
            use_random=eval_use_random,

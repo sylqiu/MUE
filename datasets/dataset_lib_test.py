@@ -9,8 +9,8 @@ import torch
 class TestDatasetLib(unittest.TestCase):
     def test_data_loader(self):
 
-      dataset = Dataset(**get_dataset_param("LIDC_IDRI", None, None, None, False, True, True))
-      "Remind implement the return LIDC's init of get_data_io_by_name in data_io_lib"
+      dataset = Dataset(**get_dataset_param("LIDC_IDRI","YOUR_PATH", "split",  None, None, None, False, True, True))
+      "implement YOUR_PATH by dataset path root, split by train or test"
 
       train_loader = torch.utils.data.DataLoader(dataset,
                             batch_size=10,

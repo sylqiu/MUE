@@ -39,14 +39,13 @@ class DataIO(ABC):
     pass
 
 
-def get_data_io_by_name(dataset_name: str) -> DataIO:
+def get_data_io_by_name(dataset_name: str, data_path_root: str, split: str) -> DataIO:
   if dataset_name == "LIDC_IDRI":
-    return LIDC_IDRI()
+    return LIDC_IDRI(data_path_root, split)
   else:
     raise NotImplementedError
 
 
-@gin.configurable
 class LIDC_IDRI(DataIO):
 
   def __init__(self, data_path_root: str, split: str):
