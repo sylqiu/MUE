@@ -239,7 +239,8 @@ class DiscretePosteriorEncoder(torch.nn.Module):
     self._code_book = QuantizeEMA(self._latent_code_dimension,
                                   self._code_book_size,
                                   init_mean=mean,
-                                  init_std=std)
+                                  init_std=std
+                                  )
 
   def forward(self, inputs: torch.Tensor) -> torch.Tensor:
     """Returns the quantized code of shape (B, C, 1, 1)."""
@@ -296,13 +297,13 @@ class DiscretePriorEncoder(torch.nn.Module):
         unet_encoder_param["channels_list"][-1], latent_code_dimension,
         code_book_size, unet_encoder_param["normalization_config"])
     self._code_book = None
-
+    
   def get_code_book(self, code_book: torch.Tensor):
     # self._code_book is of shape (latent_code_dimension, code_book_size)
     self._code_book = code_book.detach().clone()
 
   def forward(self, inputs: torch.Tensor) -> torch.Tensor:
-
+    
     coarse_to_fine_features = self._encoder(inputs)
     self.classification_probability = self._code_classifier(
         coarse_to_fine_features[self._latent_code_level])

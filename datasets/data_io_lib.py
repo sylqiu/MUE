@@ -27,7 +27,7 @@ class DataIO(ABC):
     pass
 
   @abstractmethod
-  def get_num_groud_truth_modes(self):
+  def get_num_ground_truth_modes(self):
     pass
 
   @abstractmethod
@@ -67,28 +67,28 @@ class LIDC_IDRI(DataIO):
     logging.info("%s split contains %d images" % (split, self.length))
 
   def _get_ground_truth_name_format(self, item_name: str) -> str:
-    return os.path.join(self.data_path_root, "gt", item_name + "_l%d.png")
+    return os.path.join(self.data_path_root, "gt", item_name.replace('@', '/') + "_l%d.png")
 
-  def get_num_groud_truth_modes(self) -> int:
+  def get_num_ground_truth_modes(self) -> int:
     return 4
 
   def get_data(self, input_index: int,
                output_selection_index: int) -> Dict[str, Union[Image, str]]:
     image_name = os.path.join(self.data_path_root, "images",
                               self.data_list[input_index])
-    ground_truth_name = self._get_ground_truth_name_format(input_index) % (
-        output_selection_index)
+    ground_truth_name = self._get_ground_truth_name_format(self.data_list[
+        input_index].replace('.png', '')) % (output_selection_index)
 
     return {
         IMAGE_KEY: imread(image_name),
         GROUND_TRUTH_KEY: imread(ground_truth_name),
-        ITEM_NAME_KEY: self.data_list[input_index].replace('.png', '')
+        ITEM_NAME_KEY: self.data_list[input_index].replace('/', '@').replace('.png', '')
     }
 
   def sample_output_selection_index(self):
     return torch.randint(0, 4, (1,)).item()
 
-  def get_all_ground_truth_modes(self, item_name: int) -> Sequence[Image]:
+  def get_all_ground_truth_modes(self, item_name: str) -> Sequence[Image]:
     modes_list = []
     ground_truth_name_format = self._get_ground_truth_name_format(item_name)
     for mode_index in range(4):
@@ -114,7 +114,7 @@ class GuessMNIST(DataIO):
   def __init__(self, data_path_root: str, split: str):
     self.digit_images, self.digit_labels = torch.load(
         os.path.join(data_path_root, "%s.pt" % split))
-    self.length = self.input_data.shape[0]
+    self.length = self.digit_labels.shape[0]
     logging.info("%s split contains %d images" % (split, self.length))
 
     # group data by their label
@@ -168,8 +168,8 @@ class GuessMNIST(DataIO):
             correct_guess,
         ITEM_NAME_KEY:
             '{}_'.format(group_index) +
-            ["{}_".format(id) for id in input_image_indices
-            ].join("").rstrip("_"),
+            "_".join(["{}".format(id) for id in input_image_indices
+            ]),
     }
 
   def get_num_groud_truth_modes(self) -> int:
@@ -179,7 +179,7 @@ class GuessMNIST(DataIO):
     return group_index * self.modes.shape[-1] + correct_guess_index
 
   def sample_output_selection_index(self):
-    self.group_index = np.argmax(self._cumsum_mode_probs > torch.rand(1).itme())
+    self.group_index = np.argmax(self._cumsum_mode_probs > torch.rand(1).item())
     self.correct_guess_index = np.argmax(
         self._cumsum_cond_probs[self.group_index] > torch.rand(1).item())
     return self.compute_mode_index(self.group_index, self.correct_guess_index)

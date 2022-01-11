@@ -127,7 +127,7 @@ class Dataset(torch.utils.data.Dataset):
     }
 
     if self._has_ground_truth:
-      image_dict[GROUND_TRUTH_KEY] = data_dict[IMAGE_KEY]
+      image_dict[GROUND_TRUTH_KEY] = data_dict[GROUND_TRUTH_KEY]
 
       if self._random_crop_size:
         image_dict = random_crop(image_dict, self._random_crop_size,
@@ -153,6 +153,6 @@ def get_all_ground_truth_modes(data_io, item_name: str) -> Sequence[np.ndarray]:
   modes_list = []
   imgs = data_io.get_all_ground_truth_modes(item_name)
   for img in imgs:
-    modes_list.append(to_numpy(conform_channel_dim(img)))
+    modes_list.append(conform_channel_dim(to_numpy(img)))
 
   return modes_list

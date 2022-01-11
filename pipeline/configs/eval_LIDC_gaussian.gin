@@ -1,11 +1,12 @@
-  EvalIO.base_save_path = "C:\\Users\\gli\\Documents\\MUE_Eval_Data"
+  EvalIO.base_save_path = "C:\\Users\\gli\\OneDrive - The Chinese University of Hong Kong\\Code\\MUE"
   EvalIO.dataset_name = "LIDC_IDRI"
   EvalIO.model_name = "Gaussian"
-  EvalIO.num_sample = 20
+  EvalIO.epoch_index = 99
+  EvalIO.num_sample = 16
 
-  GeneralizedEnergyDistanceEvaluator.num_cvae_samples = 20
-  GeneralizedEnergyDistanceEvaluator.eval_class_ids = 1
+  GeneralizedEnergyDistanceEvaluator.num_cvae_samples = 16
+  GeneralizedEnergyDistanceEvaluator.eval_class_ids = [1]
   GeneralizedEnergyDistanceEvaluator.dataset_name = "LIDC_IDRI"
-  GeneralizedEnergyDistanceEvaluator.data_path_root = 
+  GeneralizedEnergyDistanceEvaluator.data_path_root = "C:\\Users\\gli\\OneDrive - The Chinese University of Hong Kong\\Code\\LIDC"
   GeneralizedEnergyDistanceEvaluator.metric_fn = @metric_lib.compute_iou_metric
   GeneralizedEnergyDistanceEvaluator.use_pred_probability = False

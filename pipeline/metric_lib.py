@@ -57,7 +57,7 @@ def calc_confusion(
 
   if isinstance(class_axis, int):
     num_classes = class_axis
-    class_ixs = range(class_axis)
+    class_axis = range(class_axis)
   elif isinstance(class_axis, list):
     num_classes = len(class_axis)
   else:
@@ -69,7 +69,7 @@ def calc_confusion(
     mask = np.ones(shape=(shp[0], 1, shp[2], shp[3]))
 
   conf_matrix = np.zeros(shape=(num_classes, 4), dtype=np.float32)
-  for i, c in enumerate(class_ixs):
+  for i, c in enumerate(class_axis):
 
     pred_ = (samples == c).astype(np.uint8)
     labels_ = (labels == c).astype(np.uint8)

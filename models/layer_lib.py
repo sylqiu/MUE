@@ -108,8 +108,8 @@ class ResidualBlock(torch.nn.Module):
       normalization_config: Dict[str, Any],
   ):
     super().__init__()
-    self._conv_layers = []
-    self._norm_layers = []
+    self._conv_layers = torch.nn.ModuleList()
+    self._norm_layers = torch.nn.ModuleList()
     use_bias = normalization_config['use_bias']
     use_bn = normalization_config['use_batchnorm']
     if normalization_config['activation'] is None:

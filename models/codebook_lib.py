@@ -27,9 +27,9 @@ class QuantizeEMA(nn.Module):
     self.dim = dim
     self.init_decay = decay
     self.n_embed = n_embed
-    self.decay = torch.ones([n_embed]) * decay
     self.eps = 1e-5
-
+    self.register_buffer('decay', torch.ones([n_embed]) * decay)
+    
     embed = torch.randn(dim, n_embed) * init_std + init_mean
     # the code book variable
     self.register_buffer('embed', embed)
@@ -38,6 +38,7 @@ class QuantizeEMA(nn.Module):
     # averages.
     self.register_buffer('cluster_size', torch.ones(n_embed))
     self.register_buffer('embed_avg', embed.clone())
+
 
   def embed_code(self, embed_id: torch.Tensor):
     return nn.functional.embedding(embed_id, self.embed.transpose(0, 1))
@@ -74,6 +75,7 @@ class QuantizeEMA(nn.Module):
 
 
     if training:
+
       self.cluster_size.data.mul_(self.decay).add_(
           embed_onehot.sum(0).mul_(1 - self.decay))
       embed_sum = flatten.transpose(0, 1) @ embed_onehot
