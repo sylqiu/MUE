@@ -1,6 +1,6 @@
 train.batch_size = 16
 train.num_epochs = 64
-train.base_save_path = "C:\\Users\\gli\\Documents\\MUE_Eval_Data"
+train.base_save_path = ""
 train.fidelity_loss_config_dict = {
   "binary_segmentation_loss": 1,
 }
@@ -12,7 +12,7 @@ train.learning_rate_milestones = {32: 0.0001}
 train.eval_top_k_samples = None
 
 get_dataset_param.dataset_name = "GuessMNIST"
-get_dataset_param.data_path_root = "C:\\Users\\gli\\OneDrive - The Chinese University of Hong Kong\\Code\\MNIST\\processed"
+get_dataset_param.data_path_root = ""
 get_dataset_param.split = "train"
 get_dataset_param.random_crop_size = None
 get_dataset_param.random_height_width_ratio_range = None

@@ -80,7 +80,7 @@ class UnetDecoder(torch.nn.Module):
     self._skip_channels_list = skip_channels_list
     self._output_level_list = output_level_list
 
-    for layer_index in range(len(kernel_size_list)):
+    for layer_index in range(len(kernel_size_list)-1):
       output_channels = channels_list[layer_index]
       if skip_channels_list[layer_index] is not None:
         input_channels += skip_channels_list[layer_index]
@@ -95,6 +95,19 @@ class UnetDecoder(torch.nn.Module):
                            kernel_size_list[layer_index],
                            **normalization_config))
       input_channels = output_channels
+
+    if skip_channels_list[-1] is not None:
+      input_channels += skip_channels_list[-1]
+    output_channels = channels_list[-1]
+    
+    self._layers.append(Conv2DReLUNorm(
+      input_channels,
+      output_channels,
+      kernel_size_list[-1], 
+      activation=None, 
+      use_bias=False,
+      use_batchnorm=False))
+
     self._output_channels = output_channels
 
 

@@ -1,10 +1,10 @@
-  EvalIO.base_save_path = "C:\\Users\\gli\\Documents\\MUE_Eval_Data"
+  EvalIO.base_save_path = ""
   EvalIO.dataset_name = "GuessMNIST"
   EvalIO.model_name = "Discrete"
   EvalIO.num_sample = 20
 
   ModeProababilityEvaluator.num_cvae_samples = 20
   ModeProababilityEvaluator.dataset_name = "GuessMNIST"
-  ModeProababilityEvaluator.data_path_root = "C:\\Users\\gli\\OneDrive - The Chinese University of Hong Kong\\Code\\MNIST\\processed"
-  ModeProababilityEvaluator.diff_fn = @metric_lib.compute_l1_metric
+  ModeProababilityEvaluator.data_path_root = ""
+  ModeProababilityEvaluator.diff_fn = @metric_lib.compute_l1_diff
   ModeProababilityEvaluator.use_pred_probability = True

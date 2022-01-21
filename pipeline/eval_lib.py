@@ -113,8 +113,8 @@ def save_results(base_save_path: str, epoch_index: Optional[int],
                  model_name: str, dataset_name: str, item_name: str,
                  num_sample: int, posterior_prediction: torch.Tensor, predictions: Sequence[torch.Tensor],
                  probabilities: Sequence[torch.Tensor]):
-  logging.info("saving results for %s model, %s, item %s" %
-               (model_name, dataset_name, item_name))
+  # logging.info("saving results for %s model, %s, item %s" %
+              #  (model_name, dataset_name, item_name))
 
   predictions_processing_layer, probabilities_processing_layer = (
       get_final_processing_layer(dataset_name=dataset_name,
@@ -159,7 +159,7 @@ def eval(model: Optional[ConditionalVAE], dataset_param: Dict[str, Any], check_p
                                             num_workers=4,
                                             pin_memory=True,
                                             sampler=None)
-
+  model.eval()
   for _, batch in enumerate(test_loader):
     item_name = batch[ITEM_NAME_KEY][0]
     inputs = batch[IMAGE_KEY].to(device).type(Tensor)

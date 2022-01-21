@@ -60,7 +60,7 @@ def binary_segmentation_loss(prediction: torch.Tensor,
   if mask is None:
     return loss.mean()
   else:
-    return torch.divide(loss * mask, mask.sum())
+    return torch.divide(loss * mask, mask.sum()).sum()
 
 
 def combine_fidelity_losses(fidelity_loss_config_dict: Dict[str, float]):

@@ -1,4 +1,5 @@
 from typing import Tuple
+from absl import logging
 import torch
 from torch import nn
 import numpy as np
@@ -39,9 +40,26 @@ class QuantizeEMA(nn.Module):
     self.register_buffer('cluster_size', torch.ones(n_embed))
     self.register_buffer('embed_avg', embed.clone())
 
+    self.usage_summary = {}
+
 
   def embed_code(self, embed_id: torch.Tensor):
     return nn.functional.embedding(embed_id, self.embed.transpose(0, 1))
+
+  def reset_usage_summary(self):
+    self.usage_summary = {}
+
+  def record_code_usage_for_batch(self, code_indices: torch.Tensor):
+    code_indices = code_indices.cpu().numpy()
+    code_indices_list = list(code_indices.squeeze())
+    for ind in code_indices_list:
+      self.usage_summary[ind] = self.usage_summary.get(ind, 0) + 1
+
+  def log_code_usage(self):
+    logging.info(' quantization usage summary \n ')
+    for key in sorted(self.usage_summary.keys()):
+        logging.info('{} : {}, '.format(key, self.usage_summary[key]))
+    logging.info(' dictionary size : {}/{}'.format(len(self.usage_summary), self.n_embed))
 
   def forward(
       self,

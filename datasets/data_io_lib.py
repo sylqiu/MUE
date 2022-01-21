@@ -41,6 +41,9 @@ class DataIO(ABC):
   @abstractmethod
   def get_ground_truth_modes_probabilities(self, item_name: str):
     pass
+  @abstractmethod
+  def get_gt_modes(self, img_key: str):
+    pass
 
 
 
@@ -101,6 +104,16 @@ class LIDC_IDRI(DataIO):
 
   def get_ground_truth_modes_probabilities(self, item_name: str):
     return None
+
+  def get_gt_modes(self, img_key: str):
+    seg_modes = np.zeros([4, 180, 180])
+    img_key = img_key.replace('@', '/')
+    for i in range(4):
+        seg_modes[i, ...] = np.array(imread(os.path.join(self.data_path_root, 'gt', img_key + '_l%d.png'%(i)))) / 255.
+
+    img = np.array(imread(os.path.join(self.data_path_root, 'images', img_key + '.png'))) / 255.
+    
+    return {'gt_modes': seg_modes, 'img' : img[None, ...]}
 
 
 

@@ -54,12 +54,12 @@ def get_unet_encoder_param(
 
 @gin.configurable
 def get_unet_decoder_param(
+    input_channels: int,
     output_channels: int,
     channels_multiplier: int,
     max_channels: int,
     num_level: int,
 ):
-  input_channels = min(channels_multiplier * 2**(num_level), max_channels)
   skip_channels_list = [None]
   channels_list = [input_channels]
   kernel_size_list = [3]
@@ -75,11 +75,10 @@ def get_unet_decoder_param(
     output_level_list.extend([False, True])
 
     if level_index == 0:
-      current_output_channels = output_channels
-      skip_channels_list.extend([skip_channels, None])
-      channels_list.extend([skip_channels, current_output_channels])
-      kernel_size_list.extend([3, 3])
-      output_level_list.extend([False, True])
+      skip_channels_list.extend([skip_channels, None, None])
+      channels_list.extend([skip_channels, skip_channels, output_channels])
+      kernel_size_list.extend([3, 3, 3])
+      output_level_list.extend([False, False, True])
 
   return {
       "input_channels": input_channels,
