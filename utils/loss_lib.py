@@ -7,7 +7,7 @@ def gaussian_kl_functional(prior_distribution: torch.distributions,
                            posterior_distribution: torch.distributions):
   """Calculate the KL divergence between Gaussian posterior and prior."""
   return torch.distributions.kl_divergence(posterior_distribution,
-                                           prior_distribution)
+                                           prior_distribution).mean()
 
 
 def discrete_kl_functional(
@@ -60,10 +60,10 @@ def binary_segmentation_loss(prediction: torch.Tensor,
   if mask is None:
     return loss.mean()
   else:
-    return torch.divide(loss * mask, mask.sum())
+    return torch.divide(loss * mask, mask.sum()).sum()
 
 
-def combine_fedility_losses(fidelity_loss_config_dict: Dict[str, float]):
+def combine_fidelity_losses(fidelity_loss_config_dict: Dict[str, float]):
   loss_mapping = {"binary_segmentation_loss": binary_segmentation_loss}
 
   def loss_fn(prediction: torch.Tensor, ground_truth: torch.Tensor,

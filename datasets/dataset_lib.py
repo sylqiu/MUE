@@ -1,9 +1,9 @@
 from typing import Any, Dict, Optional, Sequence, Tuple
-import gin.torch
 import torch
 import torchvision.transforms.functional as TF
 import numpy as np
-from .data_io_lib import get_data_io_by_name, IMAGE_KEY, ITEM_NAME_KEY, GROUND_TRUTH_KEY, MODE_ID_KEY
+from PIL import Image
+from .data_io_lib import MASK_KEY, get_data_io_by_name, IMAGE_KEY, ITEM_NAME_KEY, GROUND_TRUTH_KEY, MODE_ID_KEY
 
 MAX_INT8 = 255.0
 
@@ -55,7 +55,10 @@ def random_crop(data_dict: Dict[str, Any], random_crop_size: Tuple[int, int],
                             hs, ws, [ori_height, ori_width]),
         GROUND_TRUTH_KEY:
             TF.resized_crop(TF.pad(data_dict[GROUND_TRUTH_KEY], (wp, hp)), y_p,
-                            x_p, hs, ws, [ori_height, ori_width])
+                            x_p, hs, ws, [ori_height, ori_width]),
+        MASK_KEY:
+            TF.resized_crop(TF.pad(data_dict[MASK_KEY], (wp, hp)), y_p, x_p,
+                            hs, ws, [ori_height, ori_width])
     }
   else:
     x_p = torch.randint(0, int(ori_width - ws + 1), (1,)).item()
@@ -66,6 +69,9 @@ def random_crop(data_dict: Dict[str, Any], random_crop_size: Tuple[int, int],
                             [ori_height, ori_width]),
         GROUND_TRUTH_KEY:
             TF.resized_crop(data_dict[GROUND_TRUTH_KEY], y_p, x_p, hs, ws,
+                            [ori_height, ori_width]),
+        MASK_KEY:
+            TF.resized_crop(data_dict[MASK_KEY], y_p, x_p, hs, ws,
                             [ori_height, ori_width])
     }
 
@@ -75,7 +81,8 @@ def random_flip(data_dict: Dict[str, Any]) -> Dict[str, Any]:
   if coin == 0:
     return {
         IMAGE_KEY: TF.hflip(data_dict[IMAGE_KEY]),
-        GROUND_TRUTH_KEY: TF.hflip(data_dict[GROUND_TRUTH_KEY])
+        GROUND_TRUTH_KEY: TF.hflip(data_dict[GROUND_TRUTH_KEY]),
+        MASK_KEY: TF.hflip(data_dict[MASK_KEY])
     }
   else:
     return data_dict
@@ -90,7 +97,9 @@ def random_rotate(
       IMAGE_KEY:
           TF.rotate(data_dict[IMAGE_KEY], angle, resample=3, fill=(0,)),
       GROUND_TRUTH_KEY:
-          TF.rotate(data_dict[GROUND_TRUTH_KEY], angle, resample=3, fill=(0,))
+          TF.rotate(data_dict[GROUND_TRUTH_KEY], angle, resample=3, fill=(0,)),
+      MASK_KEY:
+          TF.rotate(data_dict[MASK_KEY], angle, resample=3, fill=(0,))
   }
 
 
@@ -120,14 +129,20 @@ class Dataset(torch.utils.data.Dataset):
       # not important, because the posterior encoder will not be used
       mode_id = 0
 
+
     data_dict = self._data_io.get_data(input_index, mode_id)
     item_name = data_dict[ITEM_NAME_KEY]
     image_dict = {
         IMAGE_KEY: data_dict[IMAGE_KEY],
     }
+    
+    if MASK_KEY not in data_dict:
+      data_dict[MASK_KEY] = Image.fromarray(np.uint8(np.ones(data_dict[IMAGE_KEY].size)*MAX_INT8))
+      image_dict[MASK_KEY] = data_dict[MASK_KEY]
 
+ 
     if self._has_ground_truth:
-      image_dict[GROUND_TRUTH_KEY] = data_dict[IMAGE_KEY]
+      image_dict[GROUND_TRUTH_KEY] = data_dict[GROUND_TRUTH_KEY]
 
       if self._random_crop_size:
         image_dict = random_crop(image_dict, self._random_crop_size,
@@ -143,6 +158,9 @@ class Dataset(torch.utils.data.Dataset):
     data_dict[MODE_ID_KEY] = mode_id
     data_dict[ITEM_NAME_KEY] = item_name
 
+    if MASK_KEY in image_dict:
+      data_dict[MASK_KEY] = image_dict[MASK_KEY]
+
     if self._has_ground_truth:
       data_dict[GROUND_TRUTH_KEY] = image_dict[GROUND_TRUTH_KEY]
 
@@ -153,6 +171,6 @@ def get_all_ground_truth_modes(data_io, item_name: str) -> Sequence[np.ndarray]:
   modes_list = []
   imgs = data_io.get_all_ground_truth_modes(item_name)
   for img in imgs:
-    modes_list.append(to_numpy(conform_channel_dim(img)))
+    modes_list.append(conform_channel_dim(to_numpy(img)))
 
   return modes_list

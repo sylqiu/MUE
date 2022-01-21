@@ -1,19 +1,18 @@
 train.batch_size = 16
 train.num_epochs = 64
-train.base_save_path = "YOUR_PATH"
+train.base_save_path = ""
 train.fidelity_loss_config_dict = {
   "binary_segmentation_loss": 1,
 }
 train.loss_weight_config_list = [
-  [10, {"kl": 0, "data_fidelity": 1, "regularization": 0.1}],
-  [64, {"kl": 1, "data_fidelity": 1, "regularization": 0.1}]
+  [64, {"kl": 1, "data_fidelity": 1, "regularization": 0.1}],
 ]
 train.initial_learning_rate = 0.001
 train.learning_rate_milestones = {32: 0.0001}
+train.eval_top_k_samples = None
 
-
-get_dataset_param.dataset_name = "LIDC_IDRI"
-get_dataset_param.data_path_root = "YOUR_PATH"
+get_dataset_param.dataset_name = "GuessMNIST"
+get_dataset_param.data_path_root = ""
 get_dataset_param.split = "train"
 get_dataset_param.random_crop_size = None
 get_dataset_param.random_height_width_ratio_range = None
@@ -21,5 +20,3 @@ get_dataset_param.random_rotate_angle_range = None
 get_dataset_param.use_random_flip = False
 get_dataset_param.is_training = True
 get_dataset_param.has_ground_truth = True
-
-

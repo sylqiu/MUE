@@ -5,7 +5,7 @@ import gin
 from . import model_lib, module_lib
 from pipeline import configure_param
 
-gin.parse_config_file('pipeline/configs/common.gin')
+
 gin.parse_config_file('pipeline/configs/discrete.gin')
 gin.parse_config_file('pipeline/configs/gaussian.gin')
 

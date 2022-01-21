@@ -34,7 +34,7 @@ def get_energy_distance_components(
                          dtype=np.float32)
   d_matrix_SS = np.zeros(shape=(num_samples, num_samples, len(eval_class_ids)),
                          dtype=np.float32)
-
+  
   # iterate all ground-truth modes
   for mode in range(num_modes):
 

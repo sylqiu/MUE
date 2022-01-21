@@ -2,15 +2,17 @@ import os
 import collections
 from absl import logging
 from tqdm import tqdm
-from typing import Callable, Dict, Optional, Sequence, Tuple
+from typing import Callable, Dict, Any, Optional, Sequence, Tuple
 import gin
 import torch
 import numpy as np
 from .configure_param import get_cvae_param, get_dataset_param
 from datasets.dataset_lib import Dataset, get_all_ground_truth_modes
-from datasets.data_io_lib import IMAGE_KEY, ITEM_NAME_KEY, DataIO, get_data_io_by_name
+from datasets.data_io_lib import IMAGE_KEY, ITEM_NAME_KEY, GROUND_TRUTH_KEY, DataIO, get_data_io_by_name
 from models.model_lib import ConditionalVAE, DISCRETE_ENCODER, GAUSSIAN_ENCODER
 from .generalized_energy_distance_lib import get_energy_distance_components, calc_energy_distances
+from pipeline import metric_lib
+from matplotlib import pyplot as plt
 
 
 def argmax_post_processing(predictions: Sequence[torch.Tensor]) -> np.ndarray:
@@ -63,6 +65,19 @@ def get_final_processing_layer(
 
   return predictions_processing_layer, probabilities_processing_layer
 
+def get_post_sample_save_path(base_save_path: str, epoch_index: Optional[int],
+                          model_name: str, dataset_name: str, item_name: str,
+                          num_sample: int):
+  dataset_model_token = "%s_%s" % (dataset_name, model_name)
+  eval_foldername = "eval_%d_epoch" % (
+      epoch_index) if epoch_index is not None else "eval"
+  save_dir = os.path.join(base_save_path, eval_foldername, dataset_model_token,
+                          "posterior")
+  if not os.path.isdir(save_dir):
+    os.makedirs(save_dir)
+
+  return os.path.join(save_dir, "%s_%d_posterior.npy" % (item_name, num_sample))
+
 
 def get_samples_save_path(base_save_path: str, epoch_index: Optional[int],
                           model_name: str, dataset_name: str, item_name: str,
@@ -96,14 +111,18 @@ def get_probs_save_path(base_save_path: str, epoch_index: Optional[int],
 
 def save_results(base_save_path: str, epoch_index: Optional[int],
                  model_name: str, dataset_name: str, item_name: str,
-                 num_sample: int, predictions: Sequence[torch.Tensor],
+                 num_sample: int, posterior_prediction: torch.Tensor, predictions: Sequence[torch.Tensor],
                  probabilities: Sequence[torch.Tensor]):
-  logging.info("saving results for %s model, %s, item %s" %
-               (model_name, dataset_name, item_name))
+  # logging.info("saving results for %s model, %s, item %s" %
+              #  (model_name, dataset_name, item_name))
 
   predictions_processing_layer, probabilities_processing_layer = (
       get_final_processing_layer(dataset_name=dataset_name,
                                  model_name=model_name))
+  np.save(
+      get_post_sample_save_path(base_save_path, epoch_index, model_name,
+                            dataset_name, item_name, num_sample),
+                            posterior_prediction.detach().cpu().numpy())
   np.save(
       get_samples_save_path(base_save_path, epoch_index, model_name,
                             dataset_name, item_name, num_sample),
@@ -115,14 +134,14 @@ def save_results(base_save_path: str, epoch_index: Optional[int],
 
 
 @gin.configurable
-def eval(model: Optional[ConditionalVAE], check_point_path: Optional[str],
+def eval(model: Optional[ConditionalVAE], dataset_param: Dict[str, Any], check_point_path: Optional[str],
          use_random: bool, top_k: Optional[int], num_cvae_sample: Optional[int],
          base_save_path: str, epoch_index: Optional[int]):
   has_cuda = True if torch.cuda.is_available() else False
   device = torch.device("cuda" if has_cuda else "cpu")
-  Tensor = torch.cuda.FloatTensor if device == "cuda" else torch.FloatTensor
+  Tensor = torch.cuda.FloatTensor if device == torch.device("cuda") else torch.FloatTensor
 
-  dataset_param = get_dataset_param()
+  #dataset_param = get_dataset_param()
   dataset_name = dataset_param["dataset_name"]
   dataset = Dataset(**dataset_param)
 
@@ -140,10 +159,12 @@ def eval(model: Optional[ConditionalVAE], check_point_path: Optional[str],
                                             num_workers=4,
                                             pin_memory=True,
                                             sampler=None)
-
+  model.eval()
   for _, batch in enumerate(test_loader):
     item_name = batch[ITEM_NAME_KEY][0]
     inputs = batch[IMAGE_KEY].to(device).type(Tensor)
+    ground_truth = batch[GROUND_TRUTH_KEY].to(device).type(Tensor)
+    posterior_prediction = model.forward(inputs=inputs, label=ground_truth)
     predictions, probabilities = model.inference(inputs=inputs,
                                                  use_random=use_random,
                                                  top_k=top_k,
@@ -156,6 +177,7 @@ def eval(model: Optional[ConditionalVAE], check_point_path: Optional[str],
                  dataset_name=dataset_name,
                  item_name=item_name,
                  num_sample=num_cvae_sample,
+                 posterior_prediction=posterior_prediction,
                  predictions=predictions,
                  probabilities=probabilities)
 
@@ -163,17 +185,18 @@ def eval(model: Optional[ConditionalVAE], check_point_path: Optional[str],
 @gin.configurable
 class EvalIO:
 
-  def __init__(self, base_save_path: str, dataset_name: str, model_name: str,
+  def __init__(self, base_save_path: str, epoch_index: str, dataset_name: str, model_name: str,
                num_sample: int):
     self.base_save_path = base_save_path
+    self.epoch_index = epoch_index
     self.dataset_name = dataset_name
     self.model_name = model_name
     self.num_sample = num_sample
-    self.num_ca
+    # self.num_ca
 
   def read_samples(self, item_name: str) -> np.ndarray:
     """Return samples has shape [num_samples, B, C, H, W]."""
-    path = get_samples_save_path(self.base_save_path, self.model_name,
+    path = get_samples_save_path(self.base_save_path, self.epoch_index, self.model_name,
                                  self.dataset_name, item_name, self.num_sample)
     try:
       samples = np.load(path)
@@ -183,7 +206,7 @@ class EvalIO:
     return samples
 
   def read_probs(self, item_name: str) -> np.ndarray:
-    path = get_probs_save_path(self.base_save_path, self.model_name,
+    path = get_probs_save_path(self.base_save_path, self.epoch_index, self.model_name,
                                self.dataset_name, item_name, self.num_sample)
     try:
       probs = np.load(path)
@@ -192,7 +215,7 @@ class EvalIO:
 
     return probs
 
-
+gin.external_configurable(metric_lib.compute_iou_metric, 'metric_lib.compute_iou_metric')
 @gin.configurable
 class GeneralizedEnergyDistanceEvaluator:
 
@@ -207,7 +230,10 @@ class GeneralizedEnergyDistanceEvaluator:
     self.metric_fn = metric_fn
 
     num_testing_items = self.data_io.length
-    num_gt_modes = self.data_io.get_num_gt_modes()
+    num_gt_modes = self.data_io.get_num_ground_truth_modes()
+
+    if isinstance(eval_class_ids, int):
+      eval_class_ids = list(range(eval_class_ids))
 
     self.d_matrices = {
         'YS':
@@ -234,8 +260,8 @@ class GeneralizedEnergyDistanceEvaluator:
       self.sample_probability = None
 
   def compute_for_item(self, item_index, item_name):
-    samples = self.eval_io.read_samples(
-        item_name=item_name)[:self.num_cvae_samples]
+    samples = self.eval_io.read_samples(item_name=
+            item_name)[:self.num_cvae_samples]
 
     if self.gt_probability is not None:
       self.gt_probability.append(
@@ -247,7 +273,8 @@ class GeneralizedEnergyDistanceEvaluator:
           self.eval_io.read_probs(item_name=item_name)[:self.num_cvae_samples])
 
     gt_modes_list = get_all_ground_truth_modes(self.data_io, item_name)
-    gt_modes = np.stack(gt_modes_list, axis=0)
+    gt_modes = np.stack(gt_modes_list, axis=0)[:, np.newaxis, ...]
+
 
     energy_dist = get_energy_distance_components(
         gt_modes=gt_modes,
@@ -260,17 +287,21 @@ class GeneralizedEnergyDistanceEvaluator:
       self.d_matrices[k][item_index] = energy_dist[k]
 
   def compute_overall_energy_distance(self) -> Sequence[float]:
+    
     if self.gt_probability is not None:
       gt_probability = np.stack(self.gt_probability, axis=0)
-
+    else:
+      gt_probability = None
     if self.sample_probability is not None:
-      sample_probability = np.stack(self.sample_probability, axis=0)
+      sample_probability = np.squeeze(np.squeeze(np.stack(self.sample_probability, axis=0), axis=3), axis=1)
+    else:
+      sample_probability = None
 
     return calc_energy_distances(self.d_matrices, sample_probability,
                                  gt_probability)
 
 
-
+gin.external_configurable(metric_lib.compute_l1_metric, 'metric_lib.compute_l1_metric')
 @gin.configurable
 class ModeProababilityEvaluator:
 
@@ -284,10 +315,10 @@ class ModeProababilityEvaluator:
 
     # Because we don't support batch loading gt modes, the batch_size should be
     # 1 for the test data.
-    num_gt_modes = self.data_io.get_num_groud_truth_modes()
+    num_gt_modes = self.data_io.get_num_ground_truth_modes()
 
     # The dictionary that holds the evaluation results.
-    # Each mode_index key is mapped tho the array of predicted probabilities
+    # Each mode_index key is mapped to the array of predicted probabilities
     # that correspond to this mode.
     self.prediction_mode_data = {}
     for mode_index in range(num_gt_modes):

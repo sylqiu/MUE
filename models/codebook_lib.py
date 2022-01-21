@@ -1,4 +1,5 @@
 from typing import Tuple
+from absl import logging
 import torch
 from torch import nn
 import numpy as np
@@ -27,9 +28,9 @@ class QuantizeEMA(nn.Module):
     self.dim = dim
     self.init_decay = decay
     self.n_embed = n_embed
-    self.decay = torch.ones([n_embed]) * decay
     self.eps = 1e-5
-
+    self.register_buffer('decay', torch.ones([n_embed]) * decay)
+    
     embed = torch.randn(dim, n_embed) * init_std + init_mean
     # the code book variable
     self.register_buffer('embed', embed)
@@ -39,8 +40,26 @@ class QuantizeEMA(nn.Module):
     self.register_buffer('cluster_size', torch.ones(n_embed))
     self.register_buffer('embed_avg', embed.clone())
 
+    self.usage_summary = {}
+
+
   def embed_code(self, embed_id: torch.Tensor):
     return nn.functional.embedding(embed_id, self.embed.transpose(0, 1))
+
+  def reset_usage_summary(self):
+    self.usage_summary = {}
+
+  def record_code_usage_for_batch(self, code_indices: torch.Tensor):
+    code_indices = code_indices.cpu().numpy()
+    code_indices_list = list(code_indices.squeeze())
+    for ind in code_indices_list:
+      self.usage_summary[ind] = self.usage_summary.get(ind, 0) + 1
+
+  def log_code_usage(self):
+    logging.info(' quantization usage summary \n ')
+    for key in sorted(self.usage_summary.keys()):
+        logging.info('{} : {}, '.format(key, self.usage_summary[key]))
+    logging.info(' dictionary size : {}/{}'.format(len(self.usage_summary), self.n_embed))
 
   def forward(
       self,
@@ -74,6 +93,7 @@ class QuantizeEMA(nn.Module):
 
 
     if training:
+
       self.cluster_size.data.mul_(self.decay).add_(
           embed_onehot.sum(0).mul_(1 - self.decay))
       embed_sum = flatten.transpose(0, 1) @ embed_onehot

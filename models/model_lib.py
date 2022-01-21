@@ -132,9 +132,12 @@ class LatentCodeClassifier(torch.nn.Module):
 
   def forward(self, inputs: torch.Tensor) -> torch.Tensor:
     """Returns a probability vector of shape (B, code_book_size)."""
-    outputs, _ = torch.max(self._layers(inputs), dim=-1)
-    outputs, _ = torch.max(outputs, dim=-1)
-    return torch.nn.functional.softmax(self._linear_classifier(outputs), dim=1)
+    outputs = self._layers(inputs)
+    outputs = torch.mean(outputs, dim=(2, 3))
+    #outputs, _ = torch.max(self._layers(inputs), dim=-1)
+    #outputs, _ = torch.max(outputs, dim=-1)
+    outputs = self._linear_classifier(outputs)
+    return outputs, torch.nn.functional.softmax(outputs, dim=1)
 
 
 class GaussianEncoder(torch.nn.Module):
@@ -239,7 +242,8 @@ class DiscretePosteriorEncoder(torch.nn.Module):
     self._code_book = QuantizeEMA(self._latent_code_dimension,
                                   self._code_book_size,
                                   init_mean=mean,
-                                  init_std=std)
+                                  init_std=std
+                                  )
 
   def forward(self, inputs: torch.Tensor) -> torch.Tensor:
     """Returns the quantized code of shape (B, C, 1, 1)."""
@@ -296,18 +300,22 @@ class DiscretePriorEncoder(torch.nn.Module):
         unet_encoder_param["channels_list"][-1], latent_code_dimension,
         code_book_size, unet_encoder_param["normalization_config"])
     self._code_book = None
-
+    
   def get_code_book(self, code_book: torch.Tensor):
     # self._code_book is of shape (latent_code_dimension, code_book_size)
     self._code_book = code_book.detach().clone()
 
   def forward(self, inputs: torch.Tensor) -> torch.Tensor:
-
+    
     coarse_to_fine_features = self._encoder(inputs)
-    self.classification_probability = self._code_classifier(
-        coarse_to_fine_features[self._latent_code_level])
+    self.prior_prob_logit, self.classification_probability = self._code_classifier(
+      coarse_to_fine_features[self._latent_code_level])
 
     return coarse_to_fine_features
+
+  def get_prior_prob_logit(self) -> torch.Tensor:
+    """Returns a prior probability logit of shape (B, code_book_size)."""
+    return self.prior_prob_logit
 
   def get_distribution(self) -> torch.Tensor:
     """Returns a probability vector of shape (B, code_book_size)."""
@@ -437,10 +445,10 @@ class ConditionalVAE(torch.nn.Module):
 
   def compute_kl_divergence(self):
     if self._encoder_class == GAUSSIAN_ENCODER:
-      return gaussian_kl_functional(self.prior_distribution,
+      return gaussian_kl_functional(self._prior_encoder.get_distribution(),
                                     self.posterior_distribution)
     if self._encoder_class == DISCRETE_ENCODER:
-      return discrete_kl_functional(self.prior_distribution,
+      return discrete_kl_functional(self._prior_encoder.get_prior_prob_logit(),
                                     self.posterior_distribution)
 
   def compute_regularization_loss(self):
